@@ -4,6 +4,11 @@ import { useToast } from '../components/Toast';
 
 const EMPTY = { name: '', unitType: '1BHK', unitLabel: '', monthlyRent: '', paymentMethod: 'Cash', phone: '', isActive: true };
 
+const methodBadge = (m) => {
+  const cls = m === 'BOB Transfer' ? 'badge-bob' : m === 'Cash' ? 'badge-cash' : m === 'UPI' ? 'badge-upi' : 'badge-other';
+  return <span className={`badge ${cls}`}>{m}</span>;
+};
+
 export default function Tenants() {
   const [tenants, setTenants] = useState([]);
   const [modal, setModal] = useState(false);
@@ -16,29 +21,23 @@ export default function Tenants() {
   useEffect(() => { load(); }, []);
 
   const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
-
   const openAdd = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  const openEdit = t => { setForm({ ...t, monthlyRent: t.monthlyRent }); setEditing(t._id); setModal(true); };
+  const openEdit = t => { setForm({ ...t }); setEditing(t._id); setModal(true); };
   const closeModal = () => { setModal(false); setEditing(null); };
 
   const save = async e => {
     e.preventDefault();
     try {
-      if (editing) {
-        await API.put(`/tenants/${editing}`, form);
-        show('✅ Tenant updated');
-      } else {
-        await API.post('/tenants', form);
-        show('✅ Tenant added');
-      }
+      if (editing) { await API.put(`/tenants/${editing}`, form); show('✅ Tenant updated'); }
+      else { await API.post('/tenants', form); show('✅ Tenant added'); }
       closeModal(); load();
     } catch (err) { show('❌ ' + (err.response?.data?.message || 'Error'), 'error'); }
   };
 
   const del = async (id, name) => {
-    if (!window.confirm(`Remove tenant "${name}"? This will not delete their payment history.`)) return;
-    try { await API.delete(`/tenants/${id}`); show('🗑️ Tenant removed'); load(); }
-    catch (err) { show('❌ Error', 'error'); }
+    if (!window.confirm(`Remove "${name}"?`)) return;
+    try { await API.delete(`/tenants/${id}`); show('🗑️ Removed'); load(); }
+    catch { show('❌ Error', 'error'); }
   };
 
   const toggle = async (t) => {
@@ -49,42 +48,36 @@ export default function Tenants() {
   if (loading) return <div className="loader"><div className="spinner" /></div>;
 
   const active = tenants.filter(t => t.isActive);
-  const inactive = tenants.filter(t => !t.isActive);
 
   return (
     <div>
       <div className="page-header">
         <div>
           <div className="page-title">👥 Tenants</div>
-          <div className="page-sub">{active.length} active tenants • Total receivable: ₹{active.reduce((s, t) => s + t.monthlyRent, 0).toLocaleString('en-IN')}/mo</div>
+          <div className="page-sub">{active.length} active • Rs.{active.reduce((s, t) => s + t.monthlyRent, 0).toLocaleString('en-IN')}/mo</div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ Add Tenant</button>
+        <button className="btn btn-primary" onClick={openAdd}>+ Add</button>
       </div>
 
       <div className="card">
+        {/* Desktop table */}
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Name</th><th>Unit</th><th>Monthly Rent</th><th>Payment Method</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
+              <tr><th>Name</th><th>Unit</th><th>Rent/Month</th><th>Method</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {tenants.length === 0 && (
-                <tr><td colSpan={7}><div className="empty"><div className="empty-icon">🏠</div><div>No tenants added yet</div></div></td></tr>
+                <tr><td colSpan={7}><div className="empty"><span className="empty-icon">🏠</span>No tenants yet</div></td></tr>
               )}
               {tenants.map(t => (
                 <tr key={t._id} style={{ opacity: t.isActive ? 1 : 0.5 }}>
                   <td><strong>{t.name}</strong></td>
-                  <td>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--success)' }}>₹{t.monthlyRent.toLocaleString('en-IN')}</td>
-                  <td>
-                    <span className={`badge badge-${t.paymentMethod === 'BOB Transfer' ? 'bob' : t.paymentMethod === 'Cash' ? 'cash' : t.paymentMethod === 'UPI' ? 'upi' : 'other'}`}>
-                      {t.paymentMethod}
-                    </span>
-                  </td>
+                  <td style={{ color: 'var(--text-muted)' }}>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--success)' }}>Rs.{t.monthlyRent.toLocaleString('en-IN')}</td>
+                  <td>{methodBadge(t.paymentMethod)}</td>
                   <td>{t.phone || '—'}</td>
-                  <td>
-                    <span className={`badge ${t.isActive ? 'badge-cash' : 'badge-other'}`}>{t.isActive ? 'Active' : 'Inactive'}</span>
-                  </td>
+                  <td><span className={`badge ${t.isActive ? 'badge-cash' : 'badge-other'}`}>{t.isActive ? 'Active' : 'Inactive'}</span></td>
                   <td>
                     <div className="actions">
                       <button className="btn btn-ghost btn-sm" onClick={() => openEdit(t)}>✏️</button>
@@ -97,13 +90,42 @@ export default function Tenants() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile card list */}
+        <div className="mobile-list">
+          {tenants.length === 0 && <div className="empty"><span className="empty-icon">🏠</span>No tenants yet</div>}
+          {tenants.map(t => (
+            <div key={t._id} className="mobile-card" style={{ opacity: t.isActive ? 1 : 0.55 }}>
+              <div className="mobile-card-header">
+                <div>
+                  <div className="mobile-card-name">{t.name}</div>
+                  <div className="mobile-card-meta">
+                    <span>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</span>
+                    {methodBadge(t.paymentMethod)}
+                    <span className={`badge ${t.isActive ? 'badge-cash' : 'badge-other'}`}>{t.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </div>
+                <div className="mobile-card-amount" style={{ color: 'var(--success)' }}>Rs.{t.monthlyRent.toLocaleString('en-IN')}</div>
+              </div>
+              {t.phone && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>📞 {t.phone}</div>}
+              <div className="mobile-card-actions">
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => openEdit(t)}>✏️ Edit</button>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => toggle(t)}>{t.isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => del(t._id, t.name)} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>🗑️</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      <button className="fab" onClick={openAdd}>+</button>
 
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
           <div className="modal">
+            <div className="modal-handle" />
             <div className="modal-header">
-              <div className="modal-title">{editing ? '✏️ Edit Tenant' : '+ Add New Tenant'}</div>
+              <div className="modal-title">{editing ? '✏️ Edit Tenant' : '+ Add Tenant'}</div>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <form onSubmit={save}>
@@ -121,23 +143,23 @@ export default function Tenants() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">Unit Label</label>
-                    <input className="form-control" name="unitLabel" value={form.unitLabel} onChange={handle} placeholder="e.g. Front, Back, F1" />
+                    <input className="form-control" name="unitLabel" value={form.unitLabel} onChange={handle} placeholder="Front, Back, F1" />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Monthly Rent (₹) *</label>
+                    <label className="form-label">Monthly Rent (Rs.) *</label>
                     <input className="form-control" name="monthlyRent" type="number" value={form.monthlyRent} onChange={handle} required placeholder="8000" />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Default Payment</label>
+                    <label className="form-label">Payment Method</label>
                     <select className="form-control" name="paymentMethod" value={form.paymentMethod} onChange={handle}>
                       {['BOB Transfer','Cash','UPI','Other'].map(v => <option key={v}>{v}</option>)}
                     </select>
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Phone (optional)</label>
+                  <label className="form-label">Phone</label>
                   <input className="form-control" name="phone" value={form.phone} onChange={handle} placeholder="9876543210" />
                 </div>
               </div>

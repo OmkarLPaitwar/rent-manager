@@ -98,19 +98,16 @@ export default function LandingPage() {
         borderBottom: '1px solid #e2e8f0', padding: '0 5%',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 24 }}>🏠</span>
-          <span style={{ fontWeight: 800, fontSize: 17, color: '#1e3a6e', letterSpacing: '-0.3px' }}>Rent & Expense Manager</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, overflow: 'hidden' }}>
+          <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+          <span style={{ fontWeight: 800, fontSize: 'clamp(13px,3vw,17px)', color: '#1e3a6e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Rent & Expense Manager</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => scrollTo('features')} style={navBtn}>Features</button>
-          <button onClick={() => scrollTo('how')} style={navBtn}>How it works</button>
-          <button onClick={() => scrollTo('contact')} style={navBtn}>Contact</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {user
-            ? <button onClick={() => navigate('/dashboard')} style={ctaBtn}>Go to Dashboard →</button>
+            ? <button onClick={() => navigate('/dashboard')} style={ctaBtn}>Dashboard →</button>
             : <>
                 <button onClick={() => navigate('/auth')} style={{ ...navBtn, fontWeight: 600 }}>Login</button>
-                <button onClick={() => navigate('/auth')} style={ctaBtn}>Get Started Free →</button>
+                <button onClick={() => navigate('/auth')} style={{ ...ctaBtn, fontSize: 13, padding: '9px 16px' }}>Get Started →</button>
               </>
           }
         </div>
@@ -126,7 +123,7 @@ export default function LandingPage() {
         <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'rgba(255,255,255,0.03)', top:-100, right:-150, pointerEvents:'none' }} />
         <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'rgba(240,165,0,0.08)', bottom:50, left:-80, pointerEvents:'none' }} />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 5%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(60px,8vw,80px) 5%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 48, alignItems: 'center' }}>
           <div>
             <div style={{ display:'inline-block', background:'rgba(240,165,0,0.15)', color:'#f0a500', padding:'6px 16px', borderRadius:30, fontSize:13, fontWeight:600, marginBottom:20, border:'1px solid rgba(240,165,0,0.3)' }}>
               🇮🇳 Built for Indian Property Owners
@@ -158,11 +155,7 @@ export default function LandingPage() {
           <div style={{ display:'flex', justifyContent:'center' }}>
             <div style={{ background:'white', borderRadius:20, padding:0, boxShadow:'0 40px 80px rgba(0,0,0,0.4)', width:'100%', maxWidth:380, overflow:'hidden' }}>
               <div style={{ background:'#1e3a6e', padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
-              <img 
-                src="/logo.png" 
-                alt="Logo" 
-                style={{ width: 32, height: 32, objectFit: 'contain' }} 
-              />
+                <span style={{fontSize:16}}>🏠</span>
                 <span style={{color:'white',fontWeight:600,fontSize:13}}>Monthly Summary — April 2026</span>
               </div>
               <div style={{ padding:16 }}>
@@ -287,7 +280,7 @@ export default function LandingPage() {
 
       {/* ── DEVELOPER + CONTACT ── */}
       <section id="contact" style={{ padding:'80px 5%', background:'#f4f6fb' }}>
-        <div style={{ maxWidth:1000, margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start' }}>
+        <div style={{ maxWidth:1000, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:40, alignItems:'start' }}>
 
           {/* Developer info */}
           <div>
@@ -296,10 +289,10 @@ export default function LandingPage() {
             <div style={{ background:'white', borderRadius:16, padding:28, border:'1px solid #e2e8f0', marginBottom:20 }}>
               <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:20 }}>
                 <div style={{ width:64, height:64, borderRadius:'50%', background:'linear-gradient(135deg,#1e3a6e,#2a52a0)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:26, fontWeight:800, flexShrink:0 }}>
-                  O
+                  R
                 </div>
                 <div>
-                  <div style={{ fontWeight:800, fontSize:18, color:'#1e3a6e' }}>Omkar Paitwar</div>
+                  <div style={{ fontWeight:800, fontSize:18, color:'#1e3a6e' }}>Rent Manager Developer</div>
                   <div style={{ fontSize:13, color:'#9ca3af', marginTop:2 }}>Full Stack Developer • Maharashtra, India</div>
                   <div style={{ display:'flex', gap:8, marginTop:6 }}>
                     {['React','Node.js','MongoDB'].map(t => (
