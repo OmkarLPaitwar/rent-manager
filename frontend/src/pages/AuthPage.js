@@ -34,7 +34,11 @@ export default function AuthPage() {
     <div className="auth-screen">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="icon">🏠</div>
+        <img 
+          src="/logo.png" 
+          alt="Logo" 
+          style={{ width: 80, height: 80, objectFit: "contain" }} 
+        />
           <h1>Rent & Expense Manager</h1>
           <p>Track your property income & expenses</p>
         </div>

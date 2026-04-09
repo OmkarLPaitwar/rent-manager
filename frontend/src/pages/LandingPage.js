@@ -158,7 +158,11 @@ export default function LandingPage() {
           <div style={{ display:'flex', justifyContent:'center' }}>
             <div style={{ background:'white', borderRadius:20, padding:0, boxShadow:'0 40px 80px rgba(0,0,0,0.4)', width:'100%', maxWidth:380, overflow:'hidden' }}>
               <div style={{ background:'#1e3a6e', padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
-                <span style={{fontSize:16}}>🏠</span>
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                style={{ width: 32, height: 32, objectFit: 'contain' }} 
+              />
                 <span style={{color:'white',fontWeight:600,fontSize:13}}>Monthly Summary — April 2026</span>
               </div>
               <div style={{ padding:16 }}>
