@@ -10,23 +10,22 @@ const NAV = [
   { to: '/lightbill', icon: '💡', label: 'Light Bill' },
   { to: '/summary',   icon: '📄', label: 'Summary' },
   { to: '/yearly',    icon: '📈', label: 'Yearly' },
+  { to: '/profile',   icon: '👤', label: 'Profile' },
 ];
 
-// Bottom nav shows 4 items + "More" button
 const BOTTOM_MAIN = NAV.slice(0, 4);
 const BOTTOM_MORE = NAV.slice(4);
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreOpen, setMoreOpen]       = useState(false);
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate  = useNavigate();
+  const location  = useLocation();
 
-  const doLogout = () => { logout(); navigate('/'); };
-  const initials = user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
+  const doLogout  = () => { logout(); navigate('/'); };
+  const initials  = user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
   const isMoreActive = BOTTOM_MORE.some(n => location.pathname === n.to);
-
   const pageTitle = NAV.find(n => n.to === location.pathname)?.label || 'Dashboard';
 
   return (
@@ -36,7 +35,15 @@ export default function Layout({ children }) {
       <div className="mobile-topbar">
         <img src="/logo.png" alt="Logo" onClick={() => setSidebarOpen(true)} style={{ cursor: 'pointer' }} />
         <span className="mobile-topbar-title">{pageTitle}</span>
-        <div className="mobile-topbar-user" onClick={() => setSidebarOpen(true)}>{initials}</div>
+        {/* Avatar → goes to Profile page */}
+        <div
+          className="mobile-topbar-user"
+          onClick={() => navigate('/profile')}
+          title="My Profile"
+          style={{ cursor: 'pointer' }}
+        >
+          {initials}
+        </div>
       </div>
 
       {/* ── SIDEBAR OVERLAY ── */}
@@ -45,7 +52,7 @@ export default function Layout({ children }) {
       {/* ── SIDEBAR ── */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
-          <img src="/logo.png" alt="Rent Manager Logo" />
+          <img src="/logo.png" alt="Logo" />
           <div className="sidebar-logo-text">
             <h1>Rent & Expense<br />Manager</h1>
             <p>Property Dashboard</p>
@@ -60,34 +67,37 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
+        {/* Sidebar user footer */}
         <div className="sidebar-footer">
-          <div className="user-info">
+          <div
+            className="user-info"
+            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
+            style={{ cursor: 'pointer', borderRadius: 10, padding: '4px 6px', transition: 'background 0.15s' }}
+          >
             <div className="avatar">{initials}</div>
             <div>
               <div className="user-name">{user?.name}</div>
-              <div className="user-prop">{user?.propertyName}</div>
+              <div className="user-prop">{user?.propertyName} • tap to edit</div>
             </div>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center', color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.2)' }} onClick={doLogout}>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ width: '100%', justifyContent: 'center', color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.2)' }}
+            onClick={doLogout}
+          >
             🚪 Logout
           </button>
         </div>
       </aside>
 
-      {/* ── MAIN CONTENT ── */}
-      <main className="main-content">
-        {children}
-      </main>
+      {/* ── MAIN ── */}
+      <main className="main-content">{children}</main>
 
       {/* ── BOTTOM NAV ── */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
           {BOTTOM_MAIN.map(n => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}
-            >
+            <NavLink key={n.to} to={n.to} className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
               <span className="bn-icon">{n.icon}</span>
               <span>{n.label}</span>
             </NavLink>
@@ -103,16 +113,13 @@ export default function Layout({ children }) {
       </nav>
 
       {/* ── MORE DRAWER ── */}
-      {moreOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 249 }} onClick={() => setMoreOpen(false)} />
-      )}
+      {moreOpen && <div style={{ position: 'fixed', inset: 0, zIndex: 249 }} onClick={() => setMoreOpen(false)} />}
       <div className={`more-drawer ${moreOpen ? 'open' : ''}`}>
         <div className="more-drawer-handle" />
         <div className="more-drawer-grid">
           {BOTTOM_MORE.map(n => (
             <NavLink
-              key={n.to}
-              to={n.to}
+              key={n.to} to={n.to}
               className={({ isActive }) => `more-drawer-item${isActive ? ' active' : ''}`}
               onClick={() => setMoreOpen(false)}
             >
@@ -130,7 +137,6 @@ export default function Layout({ children }) {
           </button>
         </div>
       </div>
-
     </div>
   );
 }
