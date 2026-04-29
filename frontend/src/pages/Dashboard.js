@@ -24,31 +24,19 @@ export default function Dashboard() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  // Optimised: single API call for current month, then lazy-load history
+  // Optimised: single API call for the last 6 months
   const load = useCallback(async () => {
     try {
-      // Load current month first — show it immediately
-      const cur = await API.get(`/summary/${currentYear}/${currentMonth}`).then(r => r.data).catch(() => null);
-      setCurrent(cur);
-      setLoading(false);
-
-      // Then load last 5 months in parallel (background)
-      const list = [];
-      for (let i = 1; i <= 5; i++) {
-        let m = currentMonth - i, y = currentYear;
-        if (m <= 0) { m += 12; y -= 1; }
-        list.push({ month: m, year: y });
+      const history = await API.get('/summary/history?count=6').then(r => r.data);
+      if (history && history.length > 0) {
+        setCurrent(history[0]); // Most recent is first
+        setSummaries(history);
       }
-      const hist = await Promise.all(
-        list.map(({ month, year }) =>
-          API.get(`/summary/${year}/${month}`).then(r => r.data).catch(() => null)
-        )
-      );
-      setSummaries([cur, ...hist.filter(Boolean)].filter(Boolean));
+      setLoading(false);
     } catch {
       setLoading(false);
     }
-  }, [currentYear, currentMonth]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 

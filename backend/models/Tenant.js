@@ -13,4 +13,6 @@ const tenantSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+tenantSchema.index({ user: 1 });
+
 module.exports = mongoose.model('Tenant', tenantSchema);

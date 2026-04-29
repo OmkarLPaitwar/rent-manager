@@ -17,19 +17,23 @@ router.post('/', auth, async (req, res) => {
   try {
     const { month, year, entries } = req.body;
 
+    if (!month || !year || !entries || !Array.isArray(entries)) {
+      return res.status(400).json({ message: 'Month, year and entries array are required' });
+    }
+
     // Calculate totals
     const processedEntries = entries.map(e => ({
       ...e,
-      unitsConsumed: e.currentReading - e.previousReading,
-      amount: (e.currentReading - e.previousReading) * (e.ratePerUnit || 12)
+      unitsConsumed: (e.currentReading || 0) - (e.previousReading || 0),
+      amount: ((e.currentReading || 0) - (e.previousReading || 0)) * (e.ratePerUnit || 12)
     }));
 
     const totalUnits = processedEntries.reduce((s, e) => s + e.unitsConsumed, 0);
     const totalAmount = processedEntries.reduce((s, e) => s + e.amount, 0);
 
     const bill = await LightBill.findOneAndUpdate(
-      { user: req.user._id, month, year },
-      { user: req.user._id, month, year, entries: processedEntries, totalUnits, totalAmount, updatedAt: Date.now() },
+      { user: req.user._id, month: parseInt(month), year: parseInt(year) },
+      { user: req.user._id, month: parseInt(month), year: parseInt(year), entries: processedEntries, totalUnits, totalAmount, updatedAt: Date.now() },
       { upsert: true, new: true }
     );
     res.json(bill);

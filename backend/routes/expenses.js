@@ -18,7 +18,17 @@ router.get('/', auth, async (req, res) => {
 // Add expense
 router.post('/', auth, async (req, res) => {
   try {
-    const d = new Date(req.body.date);
+    const { title, amount, date } = req.body;
+
+    if (!title || !amount || !date) {
+      return res.status(400).json({ message: 'Title, amount and date are required' });
+    }
+
+    const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      return res.status(400).json({ message: 'Invalid date provided' });
+    }
+
     const expense = new Expense({
       ...req.body,
       user: req.user._id,

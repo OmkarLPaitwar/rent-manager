@@ -19,7 +19,16 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { tenantId, tenantName, amount, date, paymentMethod, notes } = req.body;
+    
+    if (!tenantId || !tenantName || !amount || !date) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
     const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      return res.status(400).json({ message: 'Invalid date provided' });
+    }
+
     const rent = new Rent({
       user: req.user._id,
       tenant: tenantId,

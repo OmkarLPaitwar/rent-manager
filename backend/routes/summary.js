@@ -66,4 +66,55 @@ router.get('/yearly/:year', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// ── HISTORY OVERVIEW (last N months) ──────────────────────────
+router.get('/history', auth, async (req, res) => {
+  try {
+    const count = parseInt(req.query.count) || 6;
+    const userId = req.user._id;
+    
+    const now = new Date();
+    const monthsList = [];
+    for (let i = 0; i < count; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthsList.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+    }
+
+    // Fetch everything for the relevant range in parallel
+    const start = monthsList[monthsList.length - 1];
+    const end = monthsList[0];
+
+    // More efficient: Fetch all matching months in one go
+    const [allRents, allExpenses, allBills, allTenants] = await Promise.all([
+      Rent.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
+      Expense.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
+      LightBill.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
+      Tenant.find({ user: userId, isActive: true }).lean(),
+    ]);
+
+    // Group by month/year in memory
+    const history = monthsList.map(({ month, year }) => {
+      const rents = allRents.filter(r => r.month === month && r.year === year);
+      const expenses = allExpenses.filter(e => e.month === month && e.year === year);
+      const lightBill = allBills.find(b => b.month === month && b.year === year) || null;
+
+      const totalRent = rents.reduce((s, r) => s + r.amount, 0);
+      const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+      
+      let bobTotal = 0, cashTotal = 0, upiTotal = 0;
+      for (const r of rents) {
+        if (r.paymentMethod === 'BOB Transfer') bobTotal += r.amount;
+        else if (r.paymentMethod === 'Cash')    cashTotal += r.amount;
+        else if (r.paymentMethod === 'UPI')     upiTotal  += r.amount;
+      }
+
+      return {
+        month, year, rents, expenses, lightBill, tenants,
+        summary: { totalRent, totalExpenses, balance: totalRent - totalExpenses, bobTotal, cashTotal, upiTotal }
+      };
+    });
+
+    res.json(history);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 module.exports = router;
