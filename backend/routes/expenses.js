@@ -24,6 +24,10 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Title, amount and date are required' });
     }
 
+    if (parseFloat(amount) <= 0) {
+      return res.status(400).json({ message: 'Amount must be greater than 0' });
+    }
+
     const d = new Date(date);
     if (isNaN(d.getTime())) {
       return res.status(400).json({ message: 'Invalid date provided' });
@@ -45,10 +49,18 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const updateData = { ...req.body };
+    if (req.body.amount !== undefined && parseFloat(req.body.amount) <= 0) {
+      return res.status(400).json({ message: 'Amount must be greater than 0' });
+    }
+
     if (req.body.date) {
       const d = new Date(req.body.date);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ message: 'Invalid date provided' });
+      }
       updateData.month = d.getMonth() + 1;
       updateData.year = d.getFullYear();
+      updateData.date = d;
     }
     const expense = await Expense.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },

@@ -13,6 +13,7 @@ import LightBill      from './pages/LightBill';
 import MonthlySummary from './pages/MonthlySummary';
 import YearlyReport   from './pages/YearlyReport';
 import ProfilePage    from './pages/ProfilePage';
+import ResetPassword  from './pages/ResetPassword';
 import './index.css';
 
 function PrivateRoute({ children }) {
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/summary"   element={<PrivateRoute><MonthlySummary /></PrivateRoute>} />
             <Route path="/yearly"    element={<PrivateRoute><YearlyReport /></PrivateRoute>} />
             <Route path="/profile"   element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+            <Route path="/reset-password/:token" element={<PublicRoute><ResetPassword /></PublicRoute>} />
             <Route path="*"          element={<Navigate to="/" />} />
           </Routes>
         </ToastProvider>

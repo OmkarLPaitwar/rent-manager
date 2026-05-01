@@ -22,11 +22,15 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Calculate totals
-    const processedEntries = entries.map(e => ({
-      ...e,
-      unitsConsumed: (e.currentReading || 0) - (e.previousReading || 0),
-      amount: ((e.currentReading || 0) - (e.previousReading || 0)) * (e.ratePerUnit || 12)
-    }));
+    const processedEntries = entries.map(e => {
+      const units = (e.currentReading || 0) - (e.previousReading || 0);
+      const rate = e.ratePerUnit || 12;
+      return {
+        ...e,
+        unitsConsumed: Math.max(0, units),
+        amount: Math.max(0, units) * rate
+      };
+    });
 
     const totalUnits = processedEntries.reduce((s, e) => s + e.unitsConsumed, 0);
     const totalAmount = processedEntries.reduce((s, e) => s + e.amount, 0);
