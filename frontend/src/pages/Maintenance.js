@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../utils/api';
 import { useToast } from '../components/Toast';
+import Loader from '../components/Loader';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DEFAULT_ENTRY = () => ({ tenant: '', tenantName: '', amount: '', notes: '' });
@@ -86,7 +87,7 @@ export default function Maintenance() {
         <input type="number" value={year} min={2020} max={2099} onChange={e => setYear(+e.target.value)} className="form-control" style={{ width: 90, fontSize: 14 }} />
       </div>
 
-      {loading ? <div className="loader"><div className="spinner" /></div> : (
+      {loading ? <Loader message="Fetching maintenance records..." /> : (
         <>
           <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 2fr 36px', gap: 8, padding: '10px 14px', background: 'var(--primary)', color: 'white', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>

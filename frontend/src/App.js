@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
+import Loader from './components/Loader';
 import LandingPage    from './pages/LandingPage';
 import AuthPage       from './pages/AuthPage';
 import Dashboard      from './pages/Dashboard';
@@ -20,14 +21,14 @@ import './index.css';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loader" style={{ minHeight: '100vh' }}><div className="spinner" /></div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader message="Securing your session..." /></div>;
   if (!user) return <Navigate to="/auth" />;
   return <Layout>{children}</Layout>;
 }
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loader" style={{ minHeight: '100vh' }}><div className="spinner" /></div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader message="Securing your session..." /></div>;
   if (user) return <Navigate to="/dashboard" />;
   return children;
 }

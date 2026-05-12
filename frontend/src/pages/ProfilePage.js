@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import API from '../utils/api';
+import Loader from '../components/Loader';
 
 export default function ProfilePage() {
   const { user, updateProfile, logout } = useAuth();
@@ -29,6 +30,8 @@ export default function ProfilePage() {
     } catch { show('❌ Failed to update', 'error'); }
     setSaving(false);
   };
+
+  if (saving && !editMode && !pwMode) return <Loader message="Updating your profile data..." />;
 
   const handlePwSave = async e => {
     e.preventDefault();

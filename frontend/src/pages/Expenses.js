@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../utils/api';
 import { useToast } from '../components/Toast';
+import Loader from '../components/Loader';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CATS = ['Maintenance','Utilities','Travel','Installment','Insurance','Tax','Other'];
@@ -78,7 +79,7 @@ export default function Expenses() {
       <div className="card">
         {/* Desktop table */}
         <div className="table-wrap">
-          {loading ? <div className="loader"><div className="spinner" /></div> : (
+          {loading ? <Loader message="Fetching expense records..." /> : (
             <table>
               <thead><tr><th>Title</th><th>Date</th><th>Category</th><th>Amount</th><th>Actions</th></tr></thead>
               <tbody>
@@ -103,7 +104,7 @@ export default function Expenses() {
 
         {/* Mobile list */}
         <div className="mobile-list">
-          {loading ? <div className="loader"><div className="spinner" /></div> : expenses.length === 0 ? (
+          {loading ? <Loader message="Loading expenses..." /> : expenses.length === 0 ? (
             <div className="empty"><span className="empty-icon">📋</span>No expenses this month</div>
           ) : expenses.map(e => (
             <div key={e._id} className="mobile-card">

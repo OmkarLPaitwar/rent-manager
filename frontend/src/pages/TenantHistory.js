@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../utils/api';
+import Loader from '../components/Loader';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -25,7 +26,7 @@ export default function TenantHistory() {
       .catch(e => { setError(e.response?.data?.message || 'Failed to load history'); setLoading(false); });
   }, [id]);
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <Loader message="Compiling tenant history and analytics..." />;
 
   if (error) return (
     <div style={{ padding: 40, textAlign: 'center' }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import API from '../utils/api';
+import Loader from '../components/Loader';
 
 const MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmt = v => `${(v/1000).toFixed(0)}k`;
@@ -17,7 +18,7 @@ export default function YearlyReport() {
       .catch(() => setLoading(false));
   }, [year]);
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <Loader message="Analyzing yearly financial trends..." />;
   if (!data) return null;
 
   const chartData = data.monthly.map((m, i) => ({ name: MS[i], Rent: m.totalRent, Expenses: m.totalExpenses, Balance: m.balance }));

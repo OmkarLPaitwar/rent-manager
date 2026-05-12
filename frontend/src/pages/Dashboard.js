@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../utils/api';
+import Loader from '../components/Loader';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -55,14 +56,17 @@ export default function Dashboard() {
 
       {/* ── STAT CARDS ── */}
       {loading ? (
-        <div className="stats-grid">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="stat-card" style={{ minHeight: 80 }}>
-              <div style={{ height: 10, background: 'var(--border)', borderRadius: 4, marginBottom: 12, width: '60%' }} />
-              <div style={{ height: 24, background: 'var(--border)', borderRadius: 4, width: '80%' }} />
-            </div>
-          ))}
-        </div>
+        <>
+          <Loader message="Fetching your dashboard overview..." />
+          <div className="stats-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="stat-card skeleton" style={{ minHeight: 80, border: 'none' }}>
+                <div style={{ height: 10, opacity: 0, marginBottom: 12, width: '60%' }} />
+                <div style={{ height: 24, opacity: 0, width: '80%' }} />
+              </div>
+            ))}
+          </div>
+        </>
       ) : current ? (
         <div className="stats-grid">
           <div className="stat-card" style={{ borderTop: '3px solid var(--success)' }}>

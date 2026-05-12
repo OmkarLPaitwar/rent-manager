@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { useToast } from '../components/Toast';
+import Loader from '../components/Loader';
 
 const EMPTY = { name: '', unitType: '1BHK', unitLabel: '', monthlyRent: '', paymentMethod: 'Cash', phone: '', isActive: true };
 
@@ -76,7 +77,7 @@ export default function Tenants() {
     catch {}
   };
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <Loader message="Fetching your tenant list..." />;
 
   const active = tenants.filter(t => t.isActive);
 
@@ -206,7 +207,7 @@ export default function Tenants() {
           </div>
 
           {loadingDeleted ? (
-            <div className="loader" style={{ padding: 40 }}><div className="spinner" /></div>
+            <Loader message="Loading former tenants history..." />
           ) : deleted.length === 0 ? (
             <div className="card">
               <div className="empty">

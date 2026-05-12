@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import API from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { generateMonthlyPDF } from '../utils/pdfExport';
+import Loader from '../components/Loader';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -27,7 +28,7 @@ export default function MonthlySummary() {
       .catch(() => setLoading(false));
   }, [month, year]);
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <Loader message="Generating monthly financial summary..." />;
   const { rents = [], expenses = [], lightBill, maintenance, summary = {} } = data || {};
 
   return (
