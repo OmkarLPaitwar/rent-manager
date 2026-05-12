@@ -126,39 +126,47 @@ router.delete('/:id', auth, async (req, res) => {
 // Data Migration Route — Use this to update existing data to the new schema
 router.post('/migrate-data', auth, async (req, res) => {
   try {
-    // 1. Update Tenants: Set defaults for missing fields
-    const tenantResult = await Tenant.updateMany(
-      { user: req.user._id, unitType: { $exists: false } },
+    const userId = req.user._id;
+    let totalTenantsUpdated = 0;
+    
+    // 1. Update Tenants: Set defaults for missing critical fields
+    const r1 = await Tenant.updateMany(
+      { user: userId, unitType: { $exists: false } },
       { $set: { unitType: '1BHK', paymentMethod: 'Cash', isActive: true, isDeleted: false } }
     );
+    totalTenantsUpdated += r1.modifiedCount;
 
-    // Also ensure isActive and isDeleted exist for all
-    await Tenant.updateMany(
-      { user: req.user._id, isActive: { $exists: false } },
+    const r2 = await Tenant.updateMany(
+      { user: userId, isActive: { $exists: false } },
       { $set: { isActive: true } }
     );
-    await Tenant.updateMany(
-      { user: req.user._id, isDeleted: { $exists: false } },
+    totalTenantsUpdated += r2.modifiedCount;
+
+    const r3 = await Tenant.updateMany(
+      { user: userId, isDeleted: { $exists: false } },
       { $set: { isDeleted: false } }
     );
+    totalTenantsUpdated += r3.modifiedCount;
 
     // 2. Update Rent: Set default paymentMethod
     const rentResult = await Rent.updateMany(
-      { user: req.user._id, paymentMethod: { $exists: false } },
+      { user: userId, paymentMethod: { $exists: false } },
       { $set: { paymentMethod: 'Cash' } }
     );
 
     // 3. Update LightBills: Ensure ratePerUnit exists in entries
-    const bills = await LightBill.find({ user: req.user._id });
+    const bills = await LightBill.find({ user: userId });
     let billsUpdated = 0;
     for (const bill of bills) {
       let changed = false;
-      bill.entries.forEach(entry => {
-        if (entry.ratePerUnit === undefined || entry.ratePerUnit === null) {
-          entry.ratePerUnit = 12;
-          changed = true;
-        }
-      });
+      if (bill.entries && Array.isArray(bill.entries)) {
+        bill.entries.forEach(entry => {
+          if (entry.ratePerUnit === undefined || entry.ratePerUnit === null) {
+            entry.ratePerUnit = 12;
+            changed = true;
+          }
+        });
+      }
       if (changed) {
         await bill.save();
         billsUpdated++;
@@ -166,13 +174,15 @@ router.post('/migrate-data', auth, async (req, res) => {
     }
 
     res.json({
-      message: 'Migration completed for your data',
-      tenantsUpdated: tenantResult.modifiedCount,
+      message: 'Migration completed successfully',
+      tenantsUpdated: totalTenantsUpdated,
       rentRecordsUpdated: rentResult.modifiedCount,
-      lightBillsUpdated: billsUpdated
+      lightBillsUpdated: billsUpdated,
+      details: `Processed tenants, rent payments, and light bills for user ${req.user.email}`
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Migration Error:', err);
+    res.status(500).json({ message: 'Migration failed: ' + err.message });
   }
 });
 
