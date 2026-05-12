@@ -123,7 +123,7 @@ export default function LandingPage() {
         <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'rgba(255,255,255,0.03)', top:-100, right:-150, pointerEvents:'none' }} />
         <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'rgba(240,165,0,0.08)', bottom:50, left:-80, pointerEvents:'none' }} />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(60px,8vw,80px) 5%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 48, alignItems: 'center' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(40px,8vw,80px) 5%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(24px, 5vw, 48px)', alignItems: 'center' }}>
           <div>
             <div style={{ display:'inline-block', background:'rgba(240,165,0,0.15)', color:'#f0a500', padding:'6px 16px', borderRadius:30, fontSize:13, fontWeight:600, marginBottom:20, border:'1px solid rgba(240,165,0,0.3)' }}>
               🇮🇳 Built for Indian Property Owners
@@ -136,11 +136,11 @@ export default function LandingPage() {
             <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>
               Stop maintaining messy diaries and Excel sheets. Track rent, expenses, light bills and generate professional PDF reports — all in one place.
             </p>
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <button onClick={() => navigate('/auth')} style={{ ...ctaBtn, padding: '14px 32px', fontSize: 16 }}>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button onClick={() => navigate('/auth')} style={{ ...ctaBtn, padding: '14px 32px', fontSize: 16, width: '100%', maxWidth: 400 }}>
                 🚀 Start Free — No Card Required
               </button>
-              <button onClick={() => scrollTo('features')} style={{ padding:'14px 28px', borderRadius:10, border:'1.5px solid rgba(255,255,255,0.3)', background:'transparent', color:'white', fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={() => scrollTo('features')} style={{ padding:'14px 28px', borderRadius:10, border:'1.5px solid rgba(255,255,255,0.3)', background:'transparent', color:'white', fontSize:15, cursor:'pointer', fontFamily:'inherit', width: '100%', maxWidth: 400 }}>
                 See Features ↓
               </button>
             </div>
@@ -188,7 +188,7 @@ export default function LandingPage() {
 
       {/* ── STATS ── */}
       <section ref={statsRef} style={{ background:'#f4f6fb', padding:'60px 5%' }}>
-        <div style={{ maxWidth:900, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:24, textAlign:'center' }}>
+        <div style={{ maxWidth:900, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:24, textAlign:'center' }}>
           {[
             [`Rs. ${rent.toLocaleString('en-IN')}+`, 'Rent tracked per property/year'],
             [`${tenants}+`, 'Tenants managed per property'],
@@ -332,7 +332,7 @@ export default function LandingPage() {
                   {formStatus === 'error' && (
                     <div style={{ background:'#fdf0ef', color:'#c0392b', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:14 }}>⚠️ {formMsg}</div>
                   )}
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:12 }}>
                     <div>
                       <label style={lbl}>Your Name *</label>
                       <input style={inp} name="name" value={form.name} onChange={handleForm} placeholder="Rajesh Kumar" required />
@@ -342,7 +342,7 @@ export default function LandingPage() {
                       <input style={inp} name="email" type="email" value={form.email} onChange={handleForm} placeholder="you@email.com" required />
                     </div>
                   </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:12 }}>
                     <div>
                       <label style={lbl}>Phone</label>
                       <input style={inp} name="phone" value={form.phone} onChange={handleForm} placeholder="9876543210" />

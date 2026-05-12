@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const Rent = require('../models/Rent');
 const Expense = require('../models/Expense');
 const LightBill = require('../models/LightBill');
+const Maintenance = require('../models/Maintenance');
 const Tenant = require('../models/Tenant');
 
 // ── HISTORY OVERVIEW (last N months) ──────────────────────────
@@ -24,10 +25,11 @@ router.get('/history', auth, async (req, res) => {
     const end = monthsList[0];
 
     // More efficient: Fetch all matching months in one go
-    const [allRents, allExpenses, allBills, allTenants] = await Promise.all([
+    const [allRents, allExpenses, allBills, allMaintenance, allTenants] = await Promise.all([
       Rent.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
       Expense.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
       LightBill.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
+      Maintenance.find({ user: userId, year: { $gte: start.year, $lte: end.year } }).lean(),
       Tenant.find({ user: userId, isActive: true }).lean(),
     ]);
 
@@ -36,8 +38,10 @@ router.get('/history', auth, async (req, res) => {
       const rents = allRents.filter(r => r.month === month && r.year === year);
       const expenses = allExpenses.filter(e => e.month === month && e.year === year);
       const lightBill = allBills.find(b => b.month === month && b.year === year) || null;
+      const maintenance = allMaintenance.find(m => m.month === month && m.year === year) || null;
 
       const totalRent = rents.reduce((s, r) => s + r.amount, 0);
+      const totalMaintenance = maintenance ? maintenance.totalAmount : 0;
       const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
       
       let bobTotal = 0, cashTotal = 0, upiTotal = 0;
@@ -48,8 +52,14 @@ router.get('/history', auth, async (req, res) => {
       }
 
       return {
-        month, year, rents, expenses, lightBill, tenants: allTenants,
-        summary: { totalRent, totalExpenses, balance: totalRent - totalExpenses, bobTotal, cashTotal, upiTotal }
+        month, year, rents, expenses, lightBill, maintenance, tenants: allTenants,
+        summary: { 
+          totalRent, 
+          totalMaintenance,
+          totalExpenses, 
+          balance: (totalRent + totalMaintenance) - totalExpenses, 
+          bobTotal, cashTotal, upiTotal 
+        }
       };
     });
 
@@ -96,14 +106,16 @@ router.get('/:year/:month', auth, async (req, res) => {
     const userId = req.user._id;
 
     // All 4 queries run in parallel
-    const [rents, expenses, lightBill, tenants] = await Promise.all([
+    const [rents, expenses, lightBill, maintenance, tenants] = await Promise.all([
       Rent.find({ user: userId, month, year }).sort({ date: 1 }).lean(),
       Expense.find({ user: userId, month, year }).sort({ date: 1 }).lean(),
       LightBill.findOne({ user: userId, month, year }).lean(),
+      Maintenance.findOne({ user: userId, month, year }).lean(),
       Tenant.find({ user: userId, isActive: true }).lean(),
     ]);
 
     const totalRent     = rents.reduce((s, r) => s + r.amount, 0);
+    const totalMaintenance = maintenance ? maintenance.totalAmount : 0;
     const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
     let bobTotal = 0, cashTotal = 0, upiTotal = 0;
@@ -114,8 +126,14 @@ router.get('/:year/:month', auth, async (req, res) => {
     }
 
     res.json({
-      month, year, rents, expenses, lightBill, tenants,
-      summary: { totalRent, totalExpenses, balance: totalRent - totalExpenses, bobTotal, cashTotal, upiTotal }
+      month, year, rents, expenses, lightBill, maintenance, tenants,
+      summary: { 
+        totalRent, 
+        totalMaintenance,
+        totalExpenses, 
+        balance: (totalRent + totalMaintenance) - totalExpenses, 
+        bobTotal, cashTotal, upiTotal 
+      }
     });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });

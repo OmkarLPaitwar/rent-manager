@@ -28,7 +28,7 @@ export default function MonthlySummary() {
   }, [month, year]);
 
   if (loading) return <div className="loader"><div className="spinner" /></div>;
-  const { rents = [], expenses = [], lightBill, summary = {} } = data || {};
+  const { rents = [], expenses = [], lightBill, maintenance, summary = {} } = data || {};
 
   return (
     <div>
@@ -54,6 +54,10 @@ export default function MonthlySummary() {
         <div className="stat-card" style={{ borderTop: '3px solid var(--success)' }}>
           <div className="stat-label">Rent Received</div>
           <div className="stat-value income">Rs.{(summary.totalRent||0).toLocaleString('en-IN')}</div>
+        </div>
+        <div className="stat-card" style={{ borderTop: '3px solid var(--primary-light)' }}>
+          <div className="stat-label">Maintenance</div>
+          <div className="stat-value neutral">Rs.{(summary.totalMaintenance||0).toLocaleString('en-IN')}</div>
         </div>
         <div className="stat-card" style={{ borderTop: '3px solid var(--danger)' }}>
           <div className="stat-label">Total Expenses</div>
@@ -170,10 +174,55 @@ export default function MonthlySummary() {
         </div>
       )}
 
+      {/* Maintenance */}
+      {maintenance && maintenance.entries.length > 0 && (
+        <div className="card" style={{ marginTop: 18, borderLeft: '4px solid var(--primary-light)' }}>
+          <div className="card-header">
+            <div className="card-title">🛠️ Maintenance Income</div>
+            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Rs.{maintenance.totalAmount.toLocaleString('en-IN')}</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Tenant</th><th>Notes</th><th>Amount</th></tr></thead>
+              <tbody>
+                {maintenance.entries.map((e, i) => (
+                  <tr key={i}>
+                    <td><strong>{e.tenantName}</strong></td>
+                    <td style={{ color: 'var(--text-muted)' }}>{e.notes || '—'}</td>
+                    <td style={{ fontWeight: 700 }}>Rs.{e.amount.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={2}><strong>Total Maintenance</strong></td>
+                  <td style={{ color: 'var(--primary)', fontSize: 15 }}>Rs.{maintenance.totalAmount.toLocaleString('en-IN')}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {/* Mobile */}
+          <div className="mobile-list">
+            {maintenance.entries.map((e, i) => (
+              <div key={i} className="mobile-card">
+                <div className="mobile-card-header">
+                  <div>
+                    <div className="mobile-card-name">{e.tenantName}</div>
+                    {e.notes && <div className="mobile-card-meta">{e.notes}</div>}
+                  </div>
+                  <div className="mobile-card-amount">Rs.{e.amount.toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Final balance box */}
       <div style={{ marginTop: 18, padding: '18px 20px', borderRadius: 14, background: (summary.balance||0) >= 0 ? 'var(--success-pale)' : 'var(--danger-pale)', border: `2px solid ${(summary.balance||0) >= 0 ? 'var(--success)' : 'var(--danger)'}` }}>
         <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>FINAL SUMMARY</div>
         {[['Total Rent', `Rs.${(summary.totalRent||0).toLocaleString('en-IN')}`, 'var(--success)'],
+          ['Maintenance', `Rs.${(summary.totalMaintenance||0).toLocaleString('en-IN')}`, 'var(--primary-light)'],
           ['Total Expenses', `Rs.${(summary.totalExpenses||0).toLocaleString('en-IN')}`, 'var(--danger)'],
           ['Balance', `${(summary.balance||0) >= 0 ? '+' : ''}Rs.${(summary.balance||0).toLocaleString('en-IN')}`, (summary.balance||0) >= 0 ? 'var(--success)' : 'var(--danger)']
         ].map(([l, v, c]) => (

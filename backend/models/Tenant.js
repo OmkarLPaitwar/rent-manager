@@ -10,7 +10,9 @@ const tenantSchema = new mongoose.Schema({
   phone: { type: String, trim: true },
   isActive: { type: Boolean, default: true },
   joinDate: { type: Date, default: Date.now },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null }
 });
 
 tenantSchema.index({ user: 1 });

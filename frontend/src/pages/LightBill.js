@@ -32,17 +32,30 @@ export default function LightBill() {
       }).catch(() => setLoading(false));
   }, [month, year]);
 
-  const updateEntry = (i, field, value) => {
-    setEntries(prev => prev.map((e, idx) => {
-      if (idx !== i) return e;
-      const updated = { ...e, [field]: value };
-      if (field === 'tenant') {
-        const t = tenants.find(t => t._id === value);
-        updated.tenantName = t?.name || '';
-        if (!updated.unitLabel && t) updated.unitLabel = `${t.unitType} ${t.unitLabel || ''}`.trim();
+  const updateEntry = async (i, field, value) => {
+    const updatedEntries = [...entries];
+    const e = { ...updatedEntries[i], [field]: value };
+
+    if (field === 'tenant') {
+      const t = tenants.find(t => t._id === value);
+      e.tenantName = t?.name || '';
+      if (!e.unitLabel && t) e.unitLabel = `${t.unitType} ${t.unitLabel || ''}`.trim();
+
+      // Automatically fetch previous reading when tenant is selected
+      if (value) {
+        try {
+          const r = await API.get(`/lightbill/previous-reading/${value}`);
+          e.previousReading = r.data.previousReading || 0;
+        } catch (err) {
+          console.error("Failed to fetch previous reading", err);
+        }
+      } else {
+        e.previousReading = '';
       }
-      return updated;
-    }));
+    }
+    
+    updatedEntries[i] = e;
+    setEntries(updatedEntries);
   };
 
   const calc = (e) => {
@@ -97,20 +110,20 @@ export default function LightBill() {
           {/* Desktop grid table */}
           <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 14 }}>
             {/* Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '10px 14px', background: 'var(--primary)', color: 'white', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              <span>Unit</span><span>Tenant</span><span>Prev</span><span>Current</span><span>Rate</span><span>Amount</span><span></span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '10px 14px', background: 'var(--primary)', color: 'white', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              <span>Tenant</span><span>Unit Label</span><span>Prev</span><span>Current</span><span>Rate</span><span>Amount</span><span></span>
             </div>
             {entries.map((entry, i) => {
               const { units, amount } = calc(entry);
               return (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center', background: i % 2 ? 'var(--bg)' : 'white' }}>
-                  <input className="form-control" value={entry.unitLabel} onChange={e => updateEntry(i, 'unitLabel', e.target.value)} placeholder="e.g. G1" style={{ fontSize: 13, padding: '5px 8px' }} />
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center', background: i % 2 ? 'var(--bg)' : 'white' }}>
                   <select className="form-control" value={entry.tenant} onChange={e => updateEntry(i, 'tenant', e.target.value)} style={{ fontSize: 13, padding: '5px 8px' }}>
-                    <option value="">— Link —</option>
+                    <option value="">— Link Tenant —</option>
                     {tenants.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
                   </select>
-                  <input className="form-control" type="number" value={entry.previousReading} onChange={e => updateEntry(i, 'previousReading', e.target.value)} placeholder="187" style={{ fontSize: 13, padding: '5px 8px' }} />
-                  <input className="form-control" type="number" value={entry.currentReading} onChange={e => updateEntry(i, 'currentReading', e.target.value)} placeholder="219" style={{ fontSize: 13, padding: '5px 8px' }} />
+                  <input className="form-control" value={entry.unitLabel} onChange={e => updateEntry(i, 'unitLabel', e.target.value)} placeholder="e.g. G1" style={{ fontSize: 13, padding: '5px 8px' }} />
+                  <input className="form-control" type="number" value={entry.previousReading} onChange={e => updateEntry(i, 'previousReading', e.target.value)} placeholder="0" style={{ fontSize: 13, padding: '5px 8px' }} />
+                  <input className="form-control" type="number" value={entry.currentReading} onChange={e => updateEntry(i, 'currentReading', e.target.value)} placeholder="Enter reading" style={{ fontSize: 13, padding: '5px 8px', borderColor: 'var(--primary)', borderWidth: 1.5 }} />
                   <input className="form-control" type="number" value={entry.ratePerUnit} onChange={e => updateEntry(i, 'ratePerUnit', e.target.value)} style={{ fontSize: 13, padding: '5px 8px' }} />
                   <div style={{ fontSize: 12 }}>
                     {entry.previousReading !== '' && entry.currentReading !== '' ? (
@@ -121,7 +134,7 @@ export default function LightBill() {
                 </div>
               );
             })}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '12px 14px', background: 'var(--primary-pale)', borderTop: '2px solid var(--primary)', alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '12px 14px', background: 'var(--primary-pale)', borderTop: '2px solid var(--primary)', alignItems: 'center' }}>
               <strong style={{ color: 'var(--primary)', fontSize: 12 }}>TOTAL</strong>
               <span /><span /><span />
               <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: 12 }}>{totalUnits}u</span>
@@ -142,15 +155,15 @@ export default function LightBill() {
                   </div>
                   <div className="form-row">
                     <div className="form-group" style={{ marginBottom: 10 }}>
-                      <label className="form-label">Unit Label</label>
-                      <input className="form-control" value={entry.unitLabel} onChange={e => updateEntry(i, 'unitLabel', e.target.value)} placeholder="e.g. G1, S2" />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 10 }}>
                       <label className="form-label">Link Tenant</label>
                       <select className="form-control" value={entry.tenant} onChange={e => updateEntry(i, 'tenant', e.target.value)}>
                         <option value="">— Select —</option>
                         {tenants.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
                       </select>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 10 }}>
+                      <label className="form-label">Unit Label</label>
+                      <input className="form-control" value={entry.unitLabel} onChange={e => updateEntry(i, 'unitLabel', e.target.value)} placeholder="e.g. G1, S2" />
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>

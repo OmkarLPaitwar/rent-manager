@@ -8,7 +8,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const rs = (amount) => `Rs. ${Number(amount).toLocaleString('en-IN')}`;
 
 export const generateMonthlyPDF = (summaryData, propertyName) => {
-  const { month, year, rents, expenses, lightBill, summary } = summaryData;
+  const { month, year, rents, expenses, lightBill, maintenance, summary } = summaryData;
   const doc = new jsPDF();
   const monthName = MONTHS[month - 1];
 
@@ -55,6 +55,37 @@ export const generateMonthlyPDF = (summaryData, propertyName) => {
   });
 
   y = doc.lastAutoTable.finalY + 14;
+
+  // ── Maintenance ─────────────────────────────────────────────
+  if (maintenance && maintenance.entries?.length > 0) {
+    if (y > 220) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 110, 150);
+    doc.text('Maintenance Income', 14, y);
+    y += 5;
+    doc.setTextColor(0, 0, 0);
+
+    const maintRows = maintenance.entries.map(e => [
+      e.tenantName,
+      e.notes || '—',
+      rs(e.amount)
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Tenant', 'Notes', 'Amount']],
+      body: maintRows,
+      foot: [['', 'Total', rs(maintenance.totalAmount)]],
+      headStyles: { fillColor: [30, 110, 150], fontSize: 10, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 10 },
+      footStyles: { fillColor: [235, 245, 250], textColor: [30, 110, 150], fontStyle: 'bold', fontSize: 10 },
+      columnStyles: { 2: { halign: 'right' } },
+      theme: 'grid',
+      margin: { left: 14, right: 14 }
+    });
+    y = doc.lastAutoTable.finalY + 14;
+  }
 
   // ── Expenses ─────────────────────────────────────────────────
   doc.setFontSize(13);
@@ -131,9 +162,9 @@ export const generateMonthlyPDF = (summaryData, propertyName) => {
   const boxBg = balPos ? [237, 250, 243] : [255, 243, 243];
 
   doc.setFillColor(...boxBg);
-  doc.roundedRect(14, y, 182, 44, 3, 3, 'F');
+  doc.roundedRect(14, y, 182, 52, 3, 3, 'F');
   doc.setDrawColor(200, 210, 230);
-  doc.roundedRect(14, y, 182, 44, 3, 3, 'S');
+  doc.roundedRect(14, y, 182, 52, 3, 3, 'S');
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -144,26 +175,33 @@ export const generateMonthlyPDF = (summaryData, propertyName) => {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
 
-  doc.text('Total Rent Received:', 22, y + 20);
+  doc.text('Total Rent Received:', 22, y + 18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 120, 60);
-  doc.text(rs(summary.totalRent), 185, y + 20, { align: 'right' });
+  doc.text(rs(summary.totalRent), 185, y + 18, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
-  doc.text('Total Expenses:', 22, y + 28);
+  doc.text('Maintenance Income:', 22, y + 25);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 110, 150);
+  doc.text(rs(summary.totalMaintenance || 0), 185, y + 25, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  doc.text('Total Expenses:', 22, y + 32);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(180, 60, 60);
-  doc.text(rs(summary.totalExpenses), 185, y + 28, { align: 'right' });
+  doc.text(rs(summary.totalExpenses), 185, y + 32, { align: 'right' });
 
   doc.setDrawColor(200, 210, 230);
-  doc.line(22, y + 33, 192, y + 33);
+  doc.line(22, y + 37, 192, y + 37);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(60, 60, 60);
-  doc.text('Remaining Balance:', 22, y + 40);
+  doc.text('Remaining Balance:', 22, y + 46);
   doc.setTextColor(...balColor);
-  doc.text(`${balPos ? '+' : '-'}${rs(Math.abs(summary.balance))}`, 185, y + 40, { align: 'right' });
+  doc.text(`${balPos ? '+' : '-'}${rs(Math.abs(summary.balance))}`, 185, y + 46, { align: 'right' });
 
   // ── Footer ───────────────────────────────────────────────────
   doc.setTextColor(180, 180, 180);

@@ -8,6 +8,7 @@ const NAV = [
   { to: '/rent',      icon: '💰', label: 'Rent' },
   { to: '/expenses',  icon: '📋', label: 'Expenses' },
   { to: '/lightbill', icon: '💡', label: 'Light Bill' },
+  { to: '/maintenance', icon: '🛠️', label: 'Maintenance' },
   { to: '/summary',   icon: '📄', label: 'Summary' },
   { to: '/yearly',    icon: '📈', label: 'Yearly' },
   { to: '/profile',   icon: '👤', label: 'Profile' },

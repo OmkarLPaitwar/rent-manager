@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+console.log('--- REBOOTING SERVER ---');
 
 // Middleware
 app.use(cors({
@@ -18,6 +19,7 @@ app.use('/api/tenants', require('./routes/tenants'));
 app.use('/api/rent', require('./routes/rent'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/lightbill', require('./routes/lightbill'));
+app.use('/api/maintenance', require('./routes/maintenance'));
 app.use('/api/summary', require('./routes/summary'));
 app.use('/api/contact', require('./routes/contact'));
 

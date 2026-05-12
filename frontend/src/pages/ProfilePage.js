@@ -155,6 +155,35 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      {/* ── MAINTENANCE & DATA FIX ── */}
+      <div className="card" style={{ marginBottom: 16, background: '#f0f9ff', border: '1px solid #bae6fd' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 20 }}>🛠️</span>
+          <div style={{ fontWeight: 700, color: '#0369a1', fontSize: 14 }}>Maintenance & Data Fix</div>
+        </div>
+        <div style={{ fontSize: 13, color: '#0c4a6e', marginBottom: 16, lineHeight: 1.5 }}>
+          If you are seeing missing unit types, payment methods or "Inactive" status on old records, use this tool to fix your existing data.
+        </div>
+        <button
+          className="btn btn-outline"
+          style={{ width: '100%', borderColor: '#0369a1', color: '#0369a1' }}
+          disabled={saving}
+          onClick={async () => {
+            if (!window.confirm('This will update all your existing tenants, rent records, and light bills with default values where data is missing. Continue?')) return;
+            setSaving(true);
+            try {
+              const res = await API.post('/tenants/migrate-data');
+              show(`✅ ${res.data.message}\nUpdated: ${res.data.tenantsUpdated} tenants, ${res.data.rentRecordsUpdated} rent records.`, 'success');
+            } catch (err) {
+              show('❌ Migration failed: ' + (err.response?.data?.message || 'Error'), 'error');
+            }
+            setSaving(false);
+          }}
+        >
+          {saving ? '⏳ Processing...' : '🔄 Fix Existing Data Schema'}
+        </button>
+      </div>
+
       {/* ── DANGER ZONE ── */}
       <div className="card" style={{ border: '1px solid #fca5a5', background: '#fef2f2', marginBottom: 16 }}>
         <div style={{ fontWeight: 700, color: 'var(--danger)', marginBottom: 12, fontSize: 14 }}>⚠️ Account Actions</div>

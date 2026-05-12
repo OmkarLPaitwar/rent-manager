@@ -20,11 +20,25 @@ export default function RentPayments() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [extra, setExtra] = useState({ light: null, maint: null });
   const { show } = useToast();
 
-  const loadRents = () => API.get(`/rent?month=${month}&year=${year}`).then(r => { setRents(r.data); setLoading(false); });
-  useEffect(() => { setLoading(true); loadRents(); }, [month, year]);
-  useEffect(() => { API.get('/tenants').then(r => setTenants(r.data.filter(t => t.isActive))); }, []);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get(`/summary/${year}/${month}`);
+      const { rents, lightBill, maintenance, tenants } = res.data;
+      setRents(rents);
+      setExtra({ light: lightBill, maint: maintenance });
+      setTenants(tenants.filter(t => t.isActive));
+    } catch (err) {
+      show('❌ Error loading data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, [month, year]);
 
   const handle = e => {
     const { name, value } = e.target;
@@ -47,13 +61,13 @@ export default function RentPayments() {
     try {
       if (editing) { await API.put(`/rent/${editing}`, form); show('✅ Updated'); }
       else { await API.post('/rent', form); show('✅ Rent recorded'); }
-      setModal(false); loadRents();
+      setModal(false); loadData();
     } catch (err) { show('❌ ' + (err.response?.data?.message || 'Error'), 'error'); }
   };
 
   const del = async (id) => {
     if (!window.confirm('Delete this payment?')) return;
-    try { await API.delete(`/rent/${id}`); show('🗑️ Deleted'); loadRents(); }
+    try { await API.delete(`/rent/${id}`); show('🗑️ Deleted'); loadData(); }
     catch { show('❌ Error', 'error'); }
   };
 
@@ -61,8 +75,31 @@ export default function RentPayments() {
   const bobTotal = rents.filter(r => r.paymentMethod === 'BOB Transfer').reduce((s, r) => s + r.amount, 0);
   const cashTotal = rents.filter(r => r.paymentMethod === 'Cash').reduce((s, r) => s + r.amount, 0);
   const upiTotal = rents.filter(r => r.paymentMethod === 'UPI').reduce((s, r) => s + r.amount, 0);
-  const paidTenantIds = [...new Set(rents.map(r => r.tenant))];
-  const unpaid = tenants.filter(t => !paidTenantIds.includes(t._id));
+
+  const dueList = tenants.map(t => {
+    const paid = rents.find(r => r.tenant === t._id);
+    const lightEntry = extra.light?.entries.find(e => e.tenant === t._id);
+    const maintEntry = extra.maint?.entries.find(e => e.tenant === t._id);
+    const lightAmount = lightEntry ? lightEntry.amount : 0;
+    const maintAmount = maintEntry ? maintEntry.amount : 0;
+    const total = t.monthlyRent + lightAmount + maintAmount;
+    return { ...t, lightAmount, maintAmount, total, isPaid: !!paid, paidAmount: paid?.amount || 0 };
+  });
+
+  const unpaid = dueList.filter(d => !d.isPaid);
+
+  const openQuickAdd = (d) => {
+    setForm({ 
+      tenantId: d._id, 
+      tenantName: d.name, 
+      amount: d.total, 
+      date: new Date().toISOString().split('T')[0], 
+      paymentMethod: d.paymentMethod || 'Cash', 
+      notes: `${extra.light ? `Light: Rs.${d.lightAmount}` : ''} ${extra.maint ? `Maint: Rs.${d.maintAmount}` : ''}`.trim()
+    });
+    setEditing(null);
+    setModal(true);
+  };
 
   return (
     <div>
@@ -89,16 +126,61 @@ export default function RentPayments() {
       </div>
 
       {unpaid.length > 0 && (
-        <div className="pending-alert">
-          <div className="pending-alert-title">⚠️ Pending ({unpaid.length})</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {unpaid.map(t => <span key={t._id} className="badge badge-other">{t.name} — Rs.{t.monthlyRent.toLocaleString('en-IN')}</span>)}
+        <div className="card" style={{ marginBottom: 20, borderTop: '4px solid var(--accent)' }}>
+          <div className="card-header">
+            <div className="card-title">⏳ Rent to be Received ({unpaid.length})</div>
+          </div>
+          <div className="table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <table style={{ fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th>Tenant</th><th>Rent</th><th>Light</th><th>Maint</th><th>Total Due</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {unpaid.map(d => (
+                  <tr key={d._id}>
+                    <td><strong>{d.name}</strong><div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{d.unitType} {d.unitLabel}</div></td>
+                    <td>{d.monthlyRent.toLocaleString('en-IN')}</td>
+                    <td style={{ color: d.lightAmount ? 'var(--primary)' : 'inherit' }}>{d.lightAmount ? d.lightAmount.toLocaleString('en-IN') : '—'}</td>
+                    <td style={{ color: d.maintAmount ? 'var(--primary)' : 'inherit' }}>{d.maintAmount ? d.maintAmount.toLocaleString('en-IN') : '—'}</td>
+                    <td style={{ fontWeight: 800, color: 'var(--accent)' }}>Rs.{d.total.toLocaleString('en-IN')}</td>
+                    <td>
+                      <button className="btn btn-primary btn-sm" onClick={() => openQuickAdd(d)} style={{ padding: '4px 10px', fontSize: 11 }}>Paid</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mobile-list">
+            {unpaid.map(d => (
+              <div key={d._id} className="mobile-card" style={{ borderLeft: '3px solid var(--accent)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{d.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.unitType} {d.unitLabel}</div>
+                    <div style={{ fontSize: 11, marginTop: 4, display: 'flex', gap: 8 }}>
+                      <span>R: {d.monthlyRent}</span>
+                      {d.lightAmount > 0 && <span>L: {d.lightAmount}</span>}
+                      {d.maintAmount > 0 && <span>M: {d.maintAmount}</span>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--accent)', fontSize: 15 }}>Rs.{d.total.toLocaleString('en-IN')}</div>
+                    <button className="btn btn-primary btn-sm" onClick={() => openQuickAdd(d)} style={{ marginTop: 6, fontSize: 11 }}>Paid</button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Desktop table */}
       <div className="card">
+        <div className="card-header">
+          <div className="card-title">✅ Payments Received</div>
+        </div>
         <div className="table-wrap">
           {loading ? <div className="loader"><div className="spinner" /></div> : (
             <table>

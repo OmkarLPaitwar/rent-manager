@@ -2,12 +2,87 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Tenant = require('../models/Tenant');
+const Rent = require('../models/Rent');
+const LightBill = require('../models/LightBill');
+const Maintenance = require('../models/Maintenance');
 
-// Get all tenants for user
+// Get all ACTIVE tenants for user (exclude soft-deleted)
 router.get('/', auth, async (req, res) => {
   try {
-    const tenants = await Tenant.find({ user: req.user._id }).sort({ name: 1 });
+    const tenants = await Tenant.find({ user: req.user._id, isDeleted: { $ne: true } }).sort({ name: 1 });
     res.json(tenants);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Get all DELETED (former) tenants — MUST be before /:id
+router.get('/deleted', auth, async (req, res) => {
+  try {
+    const tenants = await Tenant.find({
+      user: req.user._id,
+      isDeleted: true
+    }).sort({ deletedAt: -1 });
+    res.json(tenants);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Get complete history for a single tenant (works for active & deleted)
+router.get('/:id/history', auth, async (req, res) => {
+  try {
+    const tenant = await Tenant.findOne({ _id: req.params.id, user: req.user._id });
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+
+    // All rent payments for this tenant
+    const rentPayments = await Rent.find({ user: req.user._id, tenant: tenant._id })
+      .sort({ date: -1 });
+
+    // All light bill entries where this tenant appears
+    const allBills = await LightBill.find({ user: req.user._id }).sort({ year: -1, month: -1 });
+    const lightBillEntries = [];
+    allBills.forEach(bill => {
+      const entry = bill.entries.find(e => e.tenant && e.tenant.toString() === tenant._id.toString());
+      if (entry) {
+        lightBillEntries.push({
+          month: bill.month,
+          year: bill.year,
+          unitLabel: entry.unitLabel,
+          previousReading: entry.previousReading,
+          currentReading: entry.currentReading,
+          unitsConsumed: entry.unitsConsumed,
+          ratePerUnit: entry.ratePerUnit,
+          amount: entry.amount,
+        });
+      }
+    });
+
+    // All maintenance entries for this tenant
+    const allMaintenance = await Maintenance.find({ user: req.user._id, 'entries.tenant': tenant._id })
+      .sort({ year: -1, month: -1 });
+    const maintenanceEntries = [];
+    allMaintenance.forEach(m => {
+      const entry = m.entries.find(e => e.tenant && e.tenant.toString() === tenant._id.toString());
+      if (entry) {
+        maintenanceEntries.push({ month: m.month, year: m.year, amount: entry.amount, notes: entry.notes });
+      }
+    });
+
+    // Aggregate stats
+    const totalRentPaid = rentPayments.reduce((s, r) => s + r.amount, 0);
+    const totalLightBillPaid = lightBillEntries.reduce((s, e) => s + (e.amount || 0), 0);
+    const totalMaintenancePaid = maintenanceEntries.reduce((s, e) => s + (e.amount || 0), 0);
+
+    res.json({
+      tenant,
+      rentPayments,
+      lightBillEntries,
+      maintenanceEntries,
+      stats: {
+        totalRentPaid,
+        totalLightBillPaid,
+        totalMaintenancePaid,
+        totalPaid: totalRentPaid + totalLightBillPaid + totalMaintenancePaid,
+        rentPaymentsCount: rentPayments.length,
+      }
+    });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
@@ -23,23 +98,82 @@ router.post('/', auth, async (req, res) => {
 // Update tenant
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Never allow PUT to accidentally clear isDeleted
+    const { isDeleted, deletedAt, ...safeBody } = req.body;
     const tenant = await Tenant.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      req.body,
-      { new: true }
+      { $set: safeBody },
+      { new: true, runValidators: true } // Enabled validation
     );
     if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
     res.json(tenant);
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Delete tenant
+// Soft-delete tenant (preserves all data & history)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const tenant = await Tenant.findOneAndDelete({ _id: req.params.id, user: req.user._id });
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-    res.json({ message: 'Tenant deleted' });
+    const tenant = await Tenant.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id, isDeleted: { $ne: true } },
+      { $set: { isDeleted: true, deletedAt: new Date(), isActive: false } },
+      { new: true, runValidators: false }
+    );
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found or already removed' });
+    res.json({ message: 'Tenant moved to former tenants', tenant });
   } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Data Migration Route — Use this to update existing data to the new schema
+router.post('/migrate-data', auth, async (req, res) => {
+  try {
+    // 1. Update Tenants: Set defaults for missing fields
+    const tenantResult = await Tenant.updateMany(
+      { user: req.user._id, unitType: { $exists: false } },
+      { $set: { unitType: '1BHK', paymentMethod: 'Cash', isActive: true, isDeleted: false } }
+    );
+
+    // Also ensure isActive and isDeleted exist for all
+    await Tenant.updateMany(
+      { user: req.user._id, isActive: { $exists: false } },
+      { $set: { isActive: true } }
+    );
+    await Tenant.updateMany(
+      { user: req.user._id, isDeleted: { $exists: false } },
+      { $set: { isDeleted: false } }
+    );
+
+    // 2. Update Rent: Set default paymentMethod
+    const rentResult = await Rent.updateMany(
+      { user: req.user._id, paymentMethod: { $exists: false } },
+      { $set: { paymentMethod: 'Cash' } }
+    );
+
+    // 3. Update LightBills: Ensure ratePerUnit exists in entries
+    const bills = await LightBill.find({ user: req.user._id });
+    let billsUpdated = 0;
+    for (const bill of bills) {
+      let changed = false;
+      bill.entries.forEach(entry => {
+        if (entry.ratePerUnit === undefined || entry.ratePerUnit === null) {
+          entry.ratePerUnit = 12;
+          changed = true;
+        }
+      });
+      if (changed) {
+        await bill.save();
+        billsUpdated++;
+      }
+    }
+
+    res.json({
+      message: 'Migration completed for your data',
+      tenantsUpdated: tenantResult.modifiedCount,
+      rentRecordsUpdated: rentResult.modifiedCount,
+      lightBillsUpdated: billsUpdated
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 module.exports = router;

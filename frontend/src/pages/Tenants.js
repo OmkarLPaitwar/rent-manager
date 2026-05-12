@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { useToast } from '../components/Toast';
 
@@ -10,15 +11,35 @@ const methodBadge = (m) => {
 };
 
 export default function Tenants() {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState([]);
+  const [deleted, setDeleted] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
   const { show } = useToast();
 
   const load = () => API.get('/tenants').then(r => { setTenants(r.data); setLoading(false); });
   useEffect(() => { load(); }, []);
+
+  const loadDeleted = async () => {
+    setLoadingDeleted(true);
+    try {
+      const r = await API.get('/tenants/deleted');
+      setDeleted(r.data);
+    } catch { show('❌ Failed to load former tenants', 'error'); }
+    setLoadingDeleted(false);
+  };
+
+  // Always re-fetch when opening the panel so it's never stale
+  const toggleDeleted = async () => {
+    const opening = !showDeleted;
+    setShowDeleted(opening);
+    if (opening) await loadDeleted();
+  };
 
   const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
   const openAdd = () => { setForm(EMPTY); setEditing(null); setModal(true); };
@@ -35,9 +56,19 @@ export default function Tenants() {
   };
 
   const del = async (id, name) => {
-    if (!window.confirm(`Remove "${name}"?`)) return;
-    try { await API.delete(`/tenants/${id}`); show('🗑️ Removed'); load(); }
-    catch { show('❌ Error', 'error'); }
+    if (!window.confirm(`Remove "${name}" from active tenants?\nTheir complete history will be preserved in Former Tenants.`)) return;
+    try {
+      await API.delete(`/tenants/${id}`);
+      show('🗂️ Moved to Former Tenants');
+      // Reload active list immediately
+      load();
+      // Always refresh deleted list so panel shows new entry when opened
+      await loadDeleted();
+      // Auto-open the Former Tenants panel so user sees it
+      setShowDeleted(true);
+    } catch (err) {
+      show('❌ ' + (err.response?.data?.message || 'Error deleting tenant'), 'error');
+    }
   };
 
   const toggle = async (t) => {
@@ -54,12 +85,34 @@ export default function Tenants() {
       <div className="page-header">
         <div>
           <div className="page-title">👥 Tenants</div>
-          <div className="page-sub">{active.length} active • Rs.{active.reduce((s, t) => s + t.monthlyRent, 0).toLocaleString('en-IN')}/mo</div>
+          <div className="page-sub">
+            {active.length} active • Rs.{active.reduce((s, t) => s + t.monthlyRent, 0).toLocaleString('en-IN')}/mo ·{' '}
+            <span style={{ color: 'var(--primary-light)', fontStyle: 'italic' }}>click a tenant to view history</span>
+          </div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ Add</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            className={`btn btn-sm ${showDeleted ? 'btn-accent' : 'btn-ghost'}`}
+            onClick={toggleDeleted}
+            style={{ position: 'relative' }}
+          >
+            🗂️ Former Tenants
+            {deleted.length > 0 && showDeleted && (
+              <span style={{
+                position: 'absolute', top: -6, right: -6,
+                background: 'var(--danger)', color: 'white',
+                fontSize: 10, fontWeight: 700,
+                width: 18, height: 18, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{deleted.length}</span>
+            )}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={openAdd}>+ Add</button>
+        </div>
       </div>
 
-      <div className="card">
+      {/* ── Active Tenants ── */}
+      <div className="card" style={{ marginBottom: 20 }}>
         {/* Desktop table */}
         <div className="table-wrap">
           <table>
@@ -71,15 +124,23 @@ export default function Tenants() {
                 <tr><td colSpan={7}><div className="empty"><span className="empty-icon">🏠</span>No tenants yet</div></td></tr>
               )}
               {tenants.map(t => (
-                <tr key={t._id} style={{ opacity: t.isActive ? 1 : 0.5 }}>
-                  <td><strong>{t.name}</strong></td>
+                <tr
+                  key={t._id}
+                  style={{ opacity: t.isActive ? 1 : 0.5, cursor: 'pointer' }}
+                  onClick={() => navigate(`/tenants/${t._id}`)}
+                >
+                  <td>
+                    <strong style={{ color: 'var(--primary)' }}>{t.name}</strong>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>tap to view history</div>
+                  </td>
                   <td style={{ color: 'var(--text-muted)' }}>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</td>
                   <td style={{ fontWeight: 700, color: 'var(--success)' }}>Rs.{t.monthlyRent.toLocaleString('en-IN')}</td>
                   <td>{methodBadge(t.paymentMethod)}</td>
                   <td>{t.phone || '—'}</td>
                   <td><span className={`badge ${t.isActive ? 'badge-cash' : 'badge-other'}`}>{t.isActive ? 'Active' : 'Inactive'}</span></td>
                   <td>
-                    <div className="actions">
+                    <div className="actions" onClick={e => e.stopPropagation()}>
+                      <button className="btn btn-ghost btn-sm" title="View History" onClick={() => navigate(`/tenants/${t._id}`)}>👁️</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => openEdit(t)}>✏️</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => toggle(t)}>{t.isActive ? '🔴' : '🟢'}</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => del(t._id, t.name)}>🗑️</button>
@@ -96,21 +157,25 @@ export default function Tenants() {
           {tenants.length === 0 && <div className="empty"><span className="empty-icon">🏠</span>No tenants yet</div>}
           {tenants.map(t => (
             <div key={t._id} className="mobile-card" style={{ opacity: t.isActive ? 1 : 0.55 }}>
-              <div className="mobile-card-header">
+              <div className="mobile-card-header" onClick={() => navigate(`/tenants/${t._id}`)} style={{ cursor: 'pointer' }}>
                 <div>
-                  <div className="mobile-card-name">{t.name}</div>
+                  <div className="mobile-card-name" style={{ color: 'var(--primary)' }}>{t.name}</div>
                   <div className="mobile-card-meta">
                     <span>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</span>
                     {methodBadge(t.paymentMethod)}
                     <span className={`badge ${t.isActive ? 'badge-cash' : 'badge-other'}`}>{t.isActive ? 'Active' : 'Inactive'}</span>
                   </div>
                 </div>
-                <div className="mobile-card-amount" style={{ color: 'var(--success)' }}>Rs.{t.monthlyRent.toLocaleString('en-IN')}</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="mobile-card-amount" style={{ color: 'var(--success)' }}>Rs.{t.monthlyRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>👁️ view history</div>
+                </div>
               </div>
               {t.phone && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>📞 {t.phone}</div>}
               <div className="mobile-card-actions">
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => navigate(`/tenants/${t._id}`)}>👁️ History</button>
                 <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => openEdit(t)}>✏️ Edit</button>
-                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => toggle(t)}>{t.isActive ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => toggle(t)}>{t.isActive ? '🔴' : '🟢'}</button>
                 <button className="btn btn-ghost btn-sm" onClick={() => del(t._id, t.name)} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>🗑️</button>
               </div>
             </div>
@@ -120,6 +185,135 @@ export default function Tenants() {
 
       <button className="fab" onClick={openAdd}>+</button>
 
+      {/* ── Former / Deleted Tenants Section ── */}
+      {showDeleted && (
+        <div style={{ marginBottom: 24 }}>
+          {/* Section Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            marginBottom: 14, padding: '12px 16px',
+            background: '#fffbeb', border: '1px solid #fde68a',
+            borderRadius: 'var(--radius)', flexWrap: 'wrap'
+          }}>
+            <span style={{ fontSize: 20 }}>🗂️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, color: '#92400e', fontSize: 14 }}>Former Tenants</div>
+              <div style={{ fontSize: 12, color: '#a16207' }}>
+                Removed tenants — complete history is still preserved and accessible
+              </div>
+            </div>
+            {loadingDeleted && <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />}
+          </div>
+
+          {loadingDeleted ? (
+            <div className="loader" style={{ padding: 40 }}><div className="spinner" /></div>
+          ) : deleted.length === 0 ? (
+            <div className="card">
+              <div className="empty">
+                <span className="empty-icon">📭</span>
+                No former tenants yet. Deleted tenants will appear here.
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="card table-wrap" style={{ padding: 0 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Unit</th>
+                      <th>Rent/Month</th>
+                      <th>Phone</th>
+                      <th>Removed On</th>
+                      <th>History</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deleted.map(t => (
+                      <tr key={t._id} style={{ opacity: 0.85 }}>
+                        <td>
+                          <strong style={{ color: 'var(--text)' }}>{t.name}</strong>
+                          <span style={{
+                            marginLeft: 8, background: '#fef3c7', color: '#92400e',
+                            fontSize: 10, fontWeight: 700, padding: '2px 7px',
+                            borderRadius: 20, border: '1px solid #fde68a'
+                          }}>Former</span>
+                        </td>
+                        <td style={{ color: 'var(--text-muted)' }}>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>Rs.{t.monthlyRent.toLocaleString('en-IN')}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{t.phone || '—'}</td>
+                        <td style={{ color: 'var(--danger)', fontSize: 12 }}>
+                          {t.deletedAt ? new Date(t.deletedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => navigate(`/tenants/${t._id}`)}
+                            style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                          >
+                            👁️ View History
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards for deleted */}
+              <div className="mobile-list">
+                {deleted.map(t => (
+                  <div key={t._id} className="mobile-card" style={{
+                    opacity: 0.9,
+                    background: '#fffbeb',
+                    border: '1px solid #fde68a'
+                  }}>
+                    <div className="mobile-card-header">
+                      <div>
+                        <div className="mobile-card-name" style={{ color: 'var(--text)' }}>
+                          {t.name}
+                          <span style={{
+                            marginLeft: 8, background: '#fef3c7', color: '#92400e',
+                            fontSize: 10, fontWeight: 700, padding: '2px 7px',
+                            borderRadius: 20, border: '1px solid #fde68a', verticalAlign: 'middle'
+                          }}>Former</span>
+                        </div>
+                        <div className="mobile-card-meta">
+                          <span>{t.unitType} {t.unitLabel && `(${t.unitLabel})`}</span>
+                          {methodBadge(t.paymentMethod)}
+                        </div>
+                        {t.deletedAt && (
+                          <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 3 }}>
+                            🗑️ Removed: {new Date(t.deletedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="mobile-card-amount" style={{ color: 'var(--text-muted)', fontSize: 15 }}>
+                          Rs.{t.monthlyRent.toLocaleString('en-IN')}
+                        </div>
+                        {t.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>📞 {t.phone}</div>}
+                      </div>
+                    </div>
+                    <div className="mobile-card-actions">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ flex: 1, color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                        onClick={() => navigate(`/tenants/${t._id}`)}
+                      >
+                        👁️ View Full History
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Add / Edit Modal ── */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
           <div className="modal">

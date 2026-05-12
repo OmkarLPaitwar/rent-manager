@@ -230,7 +230,7 @@ tfoot tr td { background: var(--primary-pale); font-weight: 700; border-top: 2px
   .stat-value { font-size: 15px; }
   .stat-card { padding: 10px 12px; }
   .page-title { font-size: 16px; }
-  .auth-card { padding: 24px 16px; }
+  .auth-card { padding: 24px 16px; border-radius: 16px; }
 }
 
 /* ══════════════════════════════
