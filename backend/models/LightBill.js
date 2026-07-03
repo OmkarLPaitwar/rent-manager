@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const lightBillEntrySchema = new mongoose.Schema({
   unitLabel:       { type: String, required: true },
   tenant:          { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
+  sharedTenants:   [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' }],
   tenantName:      { type: String },
   previousReading: { type: Number, required: true },
   currentReading:  { type: Number, required: true },

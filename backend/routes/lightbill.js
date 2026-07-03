@@ -18,12 +18,18 @@ router.get('/previous-reading/:tenantId', auth, async (req, res) => {
     const { tenantId } = req.params;
     const bill = await LightBill.findOne({
       user: req.user._id,
-      'entries.tenant': tenantId
+      $or: [
+        { 'entries.tenant': tenantId },
+        { 'entries.sharedTenants': tenantId }
+      ]
     }).sort({ year: -1, month: -1 });
 
     if (!bill) return res.json({ previousReading: 0 });
 
-    const entry = bill.entries.find(e => e.tenant && e.tenant.toString() === tenantId);
+    const entry = bill.entries.find(e => 
+      (e.tenant && e.tenant.toString() === tenantId) || 
+      (e.sharedTenants && e.sharedTenants.some(t => t.toString() === tenantId))
+    );
     res.json({ previousReading: entry ? entry.currentReading : 0 });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });

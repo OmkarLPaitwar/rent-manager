@@ -333,7 +333,7 @@ export default function Tenants() {
                   <div className="form-group">
                     <label className="form-label">Unit Type</label>
                     <select className="form-control" name="unitType" value={form.unitType} onChange={handle}>
-                      {['1BHK','1RK','Room','Shop','Other'].map(v => <option key={v}>{v}</option>)}
+                      {['1BHK','1RK','Room','Shared Room','Shop','Other'].map(v => <option key={v}>{v}</option>)}
                     </select>
                   </div>
                   <div className="form-group">

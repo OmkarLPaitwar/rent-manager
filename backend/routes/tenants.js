@@ -39,8 +39,16 @@ router.get('/:id/history', auth, async (req, res) => {
     const allBills = await LightBill.find({ user: req.user._id }).sort({ year: -1, month: -1 });
     const lightBillEntries = [];
     allBills.forEach(bill => {
-      const entry = bill.entries.find(e => e.tenant && e.tenant.toString() === tenant._id.toString());
+      const entry = bill.entries.find(e => 
+        (e.tenant && e.tenant.toString() === tenant._id.toString()) || 
+        (e.sharedTenants && e.sharedTenants.some(t => t.toString() === tenant._id.toString()))
+      );
       if (entry) {
+        let tenantCount = 1;
+        if (entry.sharedTenants && entry.sharedTenants.length > 0) {
+          tenantCount = entry.sharedTenants.length;
+        }
+
         lightBillEntries.push({
           month: bill.month,
           year: bill.year,
@@ -49,7 +57,8 @@ router.get('/:id/history', auth, async (req, res) => {
           currentReading: entry.currentReading,
           unitsConsumed: entry.unitsConsumed,
           ratePerUnit: entry.ratePerUnit,
-          amount: entry.amount,
+          amount: entry.amount / tenantCount,
+          isShared: tenantCount > 1
         });
       }
     });

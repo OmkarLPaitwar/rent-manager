@@ -4,7 +4,44 @@ import { useToast } from '../components/Toast';
 import Loader from '../components/Loader';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DEFAULT_ENTRY = () => ({ unitLabel: '', tenant: '', tenantName: '', previousReading: '', currentReading: '', ratePerUnit: 12 });
+const DEFAULT_ENTRY = () => ({ unitLabel: '', tenant: '', sharedTenants: [], tenantName: '', previousReading: '', currentReading: '', ratePerUnit: 12 });
+
+const MultiSelect = ({ value, onChange, options, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const selected = value || [];
+  return (
+    <div style={{ position: 'relative' }}>
+      <div 
+        className="form-control" 
+        style={{ fontSize: 13, padding: '5px 8px', cursor: 'pointer', background: '#fff', minHeight: 32, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}
+        onClick={() => setOpen(!open)}
+      >
+        {selected.length === 0 ? <span style={{ color: '#999' }}>{placeholder}</span> : 
+         selected.map(id => {
+           const opt = options.find(o => o._id === id);
+           return opt ? <span key={id} style={{ background: 'var(--primary-pale)', color: 'var(--primary)', padding: '2px 6px', borderRadius: 4, fontSize: 11, display: 'inline-block' }}>{opt.name}</span> : null;
+         })
+        }
+      </div>
+      {open && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={() => setOpen(false)} />
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', zIndex: 10, maxHeight: 200, overflowY: 'auto', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', borderRadius: 4 }}>
+            {options.map(o => (
+              <div key={o._id} style={{ padding: '6px 10px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', borderBottom: '1px solid #f1f1f1' }} onClick={() => {
+                if (selected.includes(o._id)) onChange(selected.filter(id => id !== o._id));
+                else onChange([...selected, o._id]);
+              }}>
+                <input type="checkbox" checked={selected.includes(o._id)} readOnly style={{ margin: 0 }} />
+                <span>{o.name} {o.unitType === 'Shared Room' && <span style={{fontSize: 10, color: 'var(--primary)'}}>(Shared)</span>}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export default function LightBill() {
   const now = new Date();
@@ -25,7 +62,7 @@ export default function LightBill() {
         if (r.data) {
           setSaved(r.data);
           setEntries(r.data.entries.map(e => ({
-            unitLabel: e.unitLabel, tenant: e.tenant || '', tenantName: e.tenantName || '',
+            unitLabel: e.unitLabel, tenant: e.tenant || '', sharedTenants: e.sharedTenants && e.sharedTenants.length > 0 ? e.sharedTenants : (e.tenant ? [e.tenant] : []), tenantName: e.tenantName || '',
             previousReading: e.previousReading, currentReading: e.currentReading, ratePerUnit: e.ratePerUnit
           })));
         } else { setSaved(null); setEntries([DEFAULT_ENTRY()]); }
@@ -37,15 +74,17 @@ export default function LightBill() {
     const updatedEntries = [...entries];
     const e = { ...updatedEntries[i], [field]: value };
 
-    if (field === 'tenant') {
-      const t = tenants.find(t => t._id === value);
+    if (field === 'sharedTenants') {
+      const firstId = value[0] || '';
+      e.tenant = firstId;
+      const t = tenants.find(t => t._id === firstId);
       e.tenantName = t?.name || '';
       if (!e.unitLabel && t) e.unitLabel = `${t.unitType} ${t.unitLabel || ''}`.trim();
 
       // Automatically fetch previous reading when tenant is selected
-      if (value) {
+      if (firstId) {
         try {
-          const r = await API.get(`/lightbill/previous-reading/${value}`);
+          const r = await API.get(`/lightbill/previous-reading/${firstId}`);
           e.previousReading = r.data.previousReading || 0;
         } catch (err) {
           console.error("Failed to fetch previous reading", err);
@@ -118,10 +157,7 @@ export default function LightBill() {
               const { units, amount } = calc(entry);
               return (
                 <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 70px 1fr 36px', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center', background: i % 2 ? 'var(--bg)' : 'white' }}>
-                  <select className="form-control" value={entry.tenant} onChange={e => updateEntry(i, 'tenant', e.target.value)} style={{ fontSize: 13, padding: '5px 8px' }}>
-                    <option value="">— Link Tenant —</option>
-                    {tenants.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                  </select>
+                  <MultiSelect value={entry.sharedTenants} options={tenants} onChange={v => updateEntry(i, 'sharedTenants', v)} placeholder="— Link Tenants —" />
                   <input className="form-control" value={entry.unitLabel} onChange={e => updateEntry(i, 'unitLabel', e.target.value)} placeholder="e.g. G1" style={{ fontSize: 13, padding: '5px 8px' }} />
                   <input className="form-control" type="number" value={entry.previousReading} onChange={e => updateEntry(i, 'previousReading', e.target.value)} placeholder="0" style={{ fontSize: 13, padding: '5px 8px' }} />
                   <input className="form-control" type="number" value={entry.currentReading} onChange={e => updateEntry(i, 'currentReading', e.target.value)} placeholder="Enter reading" style={{ fontSize: 13, padding: '5px 8px', borderColor: 'var(--primary)', borderWidth: 1.5 }} />
@@ -157,10 +193,7 @@ export default function LightBill() {
                   <div className="form-row">
                     <div className="form-group" style={{ marginBottom: 10 }}>
                       <label className="form-label">Link Tenant</label>
-                      <select className="form-control" value={entry.tenant} onChange={e => updateEntry(i, 'tenant', e.target.value)}>
-                        <option value="">— Select —</option>
-                        {tenants.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                      </select>
+                      <MultiSelect value={entry.sharedTenants} options={tenants} onChange={v => updateEntry(i, 'sharedTenants', v)} placeholder="— Select —" />
                     </div>
                     <div className="form-group" style={{ marginBottom: 10 }}>
                       <label className="form-label">Unit Label</label>
