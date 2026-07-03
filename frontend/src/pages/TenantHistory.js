@@ -263,7 +263,10 @@ export default function TenantHistory() {
                             <td>{e.currentReading}</td>
                             <td style={{ fontWeight: 600 }}>{e.unitsConsumed} u</td>
                             <td style={{ color: 'var(--text-muted)' }}>Rs.{e.ratePerUnit}/u</td>
-                            <td style={{ fontWeight: 700, color: 'var(--danger)' }}>Rs.{fmt(e.amount)}</td>
+                            <td style={{ fontWeight: 700, color: 'var(--danger)' }}>
+                              Rs.{fmt(e.amount)}
+                              {e.isShared && <span style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--primary)', background: 'var(--primary-pale)', borderRadius: 4, padding: '1px 5px', marginTop: 2 }}>🤝 Shared (split)</span>}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -285,6 +288,7 @@ export default function TenantHistory() {
                             <div className="mobile-card-meta">
                               <span>⚡ {e.unitsConsumed} units @ Rs.{e.ratePerUnit}/u</span>
                               {e.unitLabel && <span>🏷️ {e.unitLabel}</span>}
+                              {e.isShared && <span style={{ background: 'var(--primary-pale)', color: 'var(--primary)', padding: '2px 7px', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>🤝 Shared (split)</span>}
                             </div>
                             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                               Reading: {e.previousReading} → {e.currentReading}
