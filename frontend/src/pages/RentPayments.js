@@ -77,14 +77,30 @@ export default function RentPayments() {
   const cashTotal = rents.filter(r => r.paymentMethod === 'Cash').reduce((s, r) => s + r.amount, 0);
   const upiTotal = rents.filter(r => r.paymentMethod === 'UPI').reduce((s, r) => s + r.amount, 0);
 
+  const getTenantLightDetails = (tenantId) => {
+    if (!extra.light?.entries?.length) return { amount: 0, shared: false, shareCount: 0 };
+    return extra.light.entries.reduce((result, e) => {
+      const entryTenantId = e.tenant ? String(e.tenant) : null;
+      const sharedTenantIds = Array.isArray(e.sharedTenants) ? e.sharedTenants.map(id => String(id)) : [];
+      const matches = String(tenantId) === entryTenantId || sharedTenantIds.includes(String(tenantId));
+      if (!matches) return result;
+      const shareCount = sharedTenantIds.length > 0 ? sharedTenantIds.length : 1;
+      return {
+        amount: result.amount + ((e.amount || 0) / shareCount),
+        shared: result.shared || shareCount > 1,
+        shareCount: result.shareCount || (shareCount > 1 ? shareCount : 0)
+      };
+    }, { amount: 0, shared: false, shareCount: 0 });
+  };
+
   const dueList = tenants.map(t => {
     const paid = rents.find(r => r.tenant === t._id);
-    const lightEntry = extra.light?.entries.find(e => e.tenant === t._id);
+    const lightDetails = getTenantLightDetails(t._id);
+    const lightAmount = lightDetails.amount;
     const maintEntry = extra.maint?.entries.find(e => e.tenant === t._id);
-    const lightAmount = lightEntry ? lightEntry.amount : 0;
     const maintAmount = maintEntry ? maintEntry.amount : 0;
     const total = t.monthlyRent + lightAmount + maintAmount;
-    return { ...t, lightAmount, maintAmount, total, isPaid: !!paid, paidAmount: paid?.amount || 0 };
+    return { ...t, lightAmount, maintAmount, total, isPaid: !!paid, paidAmount: paid?.amount || 0, lightShared: lightDetails.shared, lightShareCount: lightDetails.shareCount };
   });
 
   const unpaid = dueList.filter(d => !d.isPaid);
@@ -141,9 +157,15 @@ export default function RentPayments() {
               <tbody>
                 {unpaid.map(d => (
                   <tr key={d._id}>
-                    <td><strong>{d.name}</strong><div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{d.unitType} {d.unitLabel}</div></td>
+                    <td>
+                      <strong>{d.name}</strong>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{d.unitType} {d.unitLabel}</div>
+                      {d.lightShared && <div style={{ fontSize: 10, color: 'var(--primary)', marginTop: 4 }}>Shared light split {d.lightShareCount} ways</div>}
+                    </td>
                     <td>{d.monthlyRent.toLocaleString('en-IN')}</td>
-                    <td style={{ color: d.lightAmount ? 'var(--primary)' : 'inherit' }}>{d.lightAmount ? d.lightAmount.toLocaleString('en-IN') : '—'}</td>
+                    <td style={{ color: d.lightAmount ? 'var(--primary)' : 'inherit' }}>
+                      {d.lightAmount ? d.lightAmount.toLocaleString('en-IN') : '—'}
+                    </td>
                     <td style={{ color: d.maintAmount ? 'var(--primary)' : 'inherit' }}>{d.maintAmount ? d.maintAmount.toLocaleString('en-IN') : '—'}</td>
                     <td style={{ fontWeight: 800, color: 'var(--accent)' }}>Rs.{d.total.toLocaleString('en-IN')}</td>
                     <td>
@@ -161,6 +183,7 @@ export default function RentPayments() {
                   <div>
                     <div style={{ fontWeight: 700 }}>{d.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.unitType} {d.unitLabel}</div>
+                    {d.lightShared && <div style={{ fontSize: 11, color: 'var(--primary)', marginTop: 4 }}>Shared light split {d.lightShareCount} ways</div>}
                     <div style={{ fontSize: 11, marginTop: 4, display: 'flex', gap: 8 }}>
                       <span>R: {d.monthlyRent}</span>
                       {d.lightAmount > 0 && <span>L: {d.lightAmount}</span>}
