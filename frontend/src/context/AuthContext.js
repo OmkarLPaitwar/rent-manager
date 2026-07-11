@@ -26,8 +26,8 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
-  const register = async (name, email, password, propertyName) => {
-    const res = await API.post('/auth/register', { name, email, password, propertyName });
+  const register = async (name, email, password, propertyName, pin) => {
+    const res = await API.post('/auth/register', { name, email, password, propertyName, pin });
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
     return res.data;
@@ -35,7 +35,21 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    sessionStorage.removeItem('pinVerified');
     setUser(null);
+  };
+
+  const verifyPin = async (pin) => {
+    const res = await API.post('/auth/verify-pin', { pin });
+    if (res.data.success) {
+      sessionStorage.setItem('pinVerified', 'true');
+    }
+    return res.data;
+  };
+
+  const resetPin = async () => {
+    const res = await API.post('/auth/reset-pin');
+    return res.data;
   };
 
   const updateProfile = async (data) => {
@@ -54,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, forgotPassword, resetPassword, verifyPin, resetPin }}>
       {children}
     </AuthContext.Provider>
   );

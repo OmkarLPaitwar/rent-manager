@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function AuthPage() {
   const [tab, setTab] = useState('login');
-  const [form, setForm] = useState({ name: '', email: '', password: '', propertyName: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', propertyName: '', pin: '', confirmPin: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -21,9 +21,12 @@ export default function AuthPage() {
         await login(form.email, form.password);
         navigate('/dashboard');
       } else if (tab === 'register') {
-        if (!form.name || !form.email || !form.password) { setError('All fields are required'); setLoading(false); return; }
+        if (!form.name || !form.email || !form.password || !form.pin || !form.confirmPin) { setError('All fields are required'); setLoading(false); return; }
         if (form.password.length < 6) { setError('Password must be at least 6 characters'); setLoading(false); return; }
-        await register(form.name, form.email, form.password, form.propertyName);
+        if (form.pin !== form.confirmPin) { setError('PINs do not match'); setLoading(false); return; }
+        if (form.pin.length !== 4 || !/^\d{4}$/.test(form.pin)) { setError('PIN must be exactly 4 digits'); setLoading(false); return; }
+        
+        await register(form.name, form.email, form.password, form.propertyName, form.pin);
         navigate('/dashboard');
       } else if (tab === 'forgot') {
         if (!form.email) { setError('Please enter your email'); setLoading(false); return; }
@@ -82,6 +85,18 @@ export default function AuthPage() {
               </div>
               <input className="form-control" name="password" type="password" placeholder="••••••••" value={form.password} onChange={handle} required />
             </div>
+          )}
+          {tab === 'register' && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Set App PIN (4 digits)</label>
+                <input className="form-control" name="pin" type="password" inputMode="numeric" maxLength={4} pattern="\d{4}" placeholder="••••" value={form.pin} onChange={handle} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Confirm PIN</label>
+                <input className="form-control" name="confirmPin" type="password" inputMode="numeric" maxLength={4} pattern="\d{4}" placeholder="••••" value={form.confirmPin} onChange={handle} required />
+              </div>
+            </>
           )}
           <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }} disabled={loading}>
             {loading ? '⏳ Please wait...' : tab === 'login' ? '🔑 Login' : tab === 'register' ? '🚀 Create Account' : '✉️ Send Reset Link'}

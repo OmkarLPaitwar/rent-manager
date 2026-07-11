@@ -328,3 +328,87 @@ tfoot tr td { background: var(--primary-pale); font-weight: 700; border-top: 2px
   .mobile-card-name { font-size: 14px; }
   .mobile-card-amount { font-size: 17px; }
 }
+
+/* ── PIN Lock Screen ── */
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.pin-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.15s ease;
+  background: transparent;
+}
+
+.pin-dot.filled {
+  background: #f0a500;
+  border-color: #f0a500;
+  transform: scale(1.15);
+}
+
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-8px); }
+  30%, 70% { transform: translateX(8px); }
+}
+
+.pin-shake {
+  animation: pin-shake 0.5s ease-in-out;
+}
+
+.pin-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.pin-key {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  margin: 0 auto;
+}
+
+.pin-key:active {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0.92);
+}
+
+.pin-key:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pin-key.backspace {
+  font-size: 20px;
+}
+
+@media (max-height: 680px) {
+  .pin-key {
+    width: 60px;
+    height: 60px;
+    font-size: 20px;
+  }
+  .pin-key.backspace {
+    font-size: 18px;
+  }
+}
+
+

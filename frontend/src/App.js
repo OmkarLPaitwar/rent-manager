@@ -17,12 +17,17 @@ import YearlyReport   from './pages/YearlyReport';
 import Maintenance    from './pages/Maintenance';
 import ProfilePage    from './pages/ProfilePage';
 import ResetPassword  from './pages/ResetPassword';
+import PinLockPage    from './pages/PinLockPage';
+import { isStandaloneMode } from './utils/pwa';
 import './index.css';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader message="Securing your session..." /></div>;
   if (!user) return <Navigate to="/auth" />;
+  if (isStandaloneMode() && !sessionStorage.getItem('pinVerified')) {
+    return <Navigate to="/pin-lock" />;
+  }
   return <Layout>{children}</Layout>;
 }
 
@@ -33,14 +38,35 @@ function PublicRoute({ children }) {
   return children;
 }
 
+function LandingRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader message="Securing your session..." /></div>;
+  if (user && isStandaloneMode() && !sessionStorage.getItem('pinVerified')) {
+    return <Navigate to="/pin-lock" />;
+  }
+  if (user) return <Navigate to="/dashboard" />;
+  return <LandingPage />;
+}
+
+function PinRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader message="Securing your session..." /></div>;
+  if (!user) return <Navigate to="/auth" />;
+  if (!isStandaloneMode() || sessionStorage.getItem('pinVerified')) {
+    return <Navigate to="/dashboard" />;
+  }
+  return <PinLockPage />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
           <Routes>
-            <Route path="/"          element={<LandingPage />} />
+            <Route path="/"          element={<LandingRoute />} />
             <Route path="/auth"      element={<PublicRoute><AuthPage /></PublicRoute>} />
+            <Route path="/pin-lock"  element={<PinRoute />} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/tenants"   element={<PrivateRoute><Tenants /></PrivateRoute>} />
             <Route path="/tenants/:id" element={<PrivateRoute><TenantHistory /></PrivateRoute>} />

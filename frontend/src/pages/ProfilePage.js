@@ -17,6 +17,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
+  const [pinMode, setPinMode] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
+
   const initials = user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
   const handleSave = async e => {
@@ -31,7 +35,7 @@ export default function ProfilePage() {
     setSaving(false);
   };
 
-  if (saving && !editMode && !pwMode) return <Loader message="Updating your profile data..." />;
+  if (saving && !editMode && !pwMode && !pinMode) return <Loader message="Updating your profile data..." />;
 
   const handlePwSave = async e => {
     e.preventDefault();
@@ -47,6 +51,22 @@ export default function ProfilePage() {
       show('❌ ' + (err.response?.data?.message || 'Failed'), 'error');
     }
     setPwSaving(false);
+  };
+
+  const handlePinSave = async e => {
+    e.preventDefault();
+    if (pinForm.newPin.length !== 4 || !/^\d{4}$/.test(pinForm.newPin)) { show('PIN must be exactly 4 digits', 'error'); return; }
+    if (pinForm.newPin !== pinForm.confirmPin) { show('PINs do not match', 'error'); return; }
+    setPinSaving(true);
+    try {
+      await API.put('/auth/change-pin', { currentPin: pinForm.currentPin, newPin: pinForm.newPin });
+      show('✅ App PIN updated successfully!');
+      setPinMode(false);
+      setPinForm({ currentPin: '', newPin: '', confirmPin: '' });
+    } catch (err) {
+      show('❌ ' + (err.response?.data?.message || 'Failed to update PIN'), 'error');
+    }
+    setPinSaving(false);
   };
 
   const doLogout = () => { logout(); navigate('/'); };
@@ -112,6 +132,37 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setEditMode(false); setForm({ name: user?.name, propertyName: user?.propertyName }); }}>Cancel</button>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? '⏳ Saving...' : '💾 Save Changes'}</button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* ── CHANGE PIN ── */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="card-title" style={{ margin: 0 }}>🔢 App PIN Security</div>
+          <button className="btn btn-ghost btn-sm" onClick={() => setPinMode(m => !m)}>
+            {pinMode ? 'Cancel' : 'Manage PIN'}
+          </button>
+        </div>
+        
+        {pinMode && (
+          <form onSubmit={handlePinSave} style={{ marginTop: 16 }}>
+            <div className="form-group">
+              <label className="form-label">Current 4-digit PIN *</label>
+              <input className="form-control" type="password" inputMode="numeric" maxLength={4} pattern="\d{4}" value={pinForm.currentPin} onChange={e => setPinForm({...pinForm, currentPin: e.target.value})} required placeholder="••••" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">New 4-digit PIN *</label>
+              <input className="form-control" type="password" inputMode="numeric" maxLength={4} pattern="\d{4}" value={pinForm.newPin} onChange={e => setPinForm({...pinForm, newPin: e.target.value})} required placeholder="••••" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirm New PIN *</label>
+              <input className="form-control" type="password" inputMode="numeric" maxLength={4} pattern="\d{4}" value={pinForm.confirmPin} onChange={e => setPinForm({...pinForm, confirmPin: e.target.value})} required placeholder="••••" />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setPinMode(false); setPinForm({ currentPin: '', newPin: '', confirmPin: '' }); }}>Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={pinSaving}>{pinSaving ? '⏳ Saving...' : '💾 Update PIN'}</button>
             </div>
           </form>
         )}
