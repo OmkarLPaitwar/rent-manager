@@ -292,7 +292,7 @@ export default function LandingPage() {
                   R
                 </div>
                 <div>
-                  <div style={{ fontWeight:800, fontSize:18, color:'#1e3a6e' }}>Rent Manager Developer</div>
+                  <div style={{ fontWeight:800, fontSize:18, color:'#1e3a6e' }}>Omkar Paitwar</div>
                   <div style={{ fontSize:13, color:'#9ca3af', marginTop:2 }}>Full Stack Developer • Maharashtra, India</div>
                   <div style={{ display:'flex', gap:8, marginTop:6 }}>
                     {['React','Node.js','MongoDB'].map(t => (
