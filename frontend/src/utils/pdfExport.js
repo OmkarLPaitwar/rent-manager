@@ -213,3 +213,111 @@ export const generateMonthlyPDF = (summaryData, propertyName) => {
 
   doc.save(`${propertyName.replace(/\s+/g, '_')}_${monthName}_${year}.pdf`);
 };
+
+export const generateYearlyPDF = (year, data, propertyName) => {
+  const doc = new jsPDF();
+
+  const totalRent = data.monthly.reduce((s, m) => s + m.totalRent, 0);
+  const totalExp = data.monthly.reduce((s, m) => s + m.totalExpenses, 0);
+  const totalBal = totalRent - totalExp;
+
+  // ── Header bar ──────────────────────────────────────────────
+  doc.setFillColor(30, 58, 110);
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text(propertyName, 14, 14);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${year}  |  Yearly Financial Report`, 14, 24);
+
+  doc.setTextColor(0, 0, 0);
+  let y = 42;
+
+  // ── Month-by-Month Breakdown ───────────────────────────────────────────
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 58, 110);
+  doc.text(`Month-by-Month Breakdown (${year})`, 14, y);
+  y += 5;
+  doc.setTextColor(0, 0, 0);
+
+  const monthlyRows = data.monthly.map((m, i) => [
+    MONTHS[i],
+    rs(m.totalRent),
+    rs(m.totalExpenses),
+    (m.balance >= 0 ? '+' : '') + rs(m.balance)
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Month', 'Rent Received', 'Expenses', 'Net Balance']],
+    body: monthlyRows,
+    foot: [['Year Total', rs(totalRent), rs(totalExp), (totalBal >= 0 ? '+' : '') + rs(totalBal)]],
+    headStyles: { fillColor: [30, 58, 110], fontSize: 10, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 10 },
+    footStyles: { fillColor: [232, 237, 248], textColor: [30, 58, 110], fontStyle: 'bold', fontSize: 10 },
+    columnStyles: { 
+      1: { halign: 'right', textColor: [40, 120, 60] }, 
+      2: { halign: 'right', textColor: [180, 60, 60] }, 
+      3: { halign: 'right', fontStyle: 'bold' } 
+    },
+    theme: 'grid',
+    margin: { left: 14, right: 14 }
+  });
+
+  y = doc.lastAutoTable.finalY + 14;
+
+  // ── Summary box ──────────────────────────────────────────────
+  if (y > 240) { doc.addPage(); y = 20; }
+
+  const balPos = (totalBal >= 0);
+  const balColor = balPos ? [40, 120, 60] : [180, 60, 60];
+  const boxBg = balPos ? [237, 250, 243] : [255, 243, 243];
+
+  doc.setFillColor(...boxBg);
+  doc.roundedRect(14, y, 182, 45, 3, 3, 'F');
+  doc.setDrawColor(200, 210, 230);
+  doc.roundedRect(14, y, 182, 45, 3, 3, 'S');
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 58, 110);
+  doc.text('Yearly Summary', 20, y + 10);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  
+  doc.setTextColor(60, 60, 60);
+  doc.text('Total Rent Received:', 22, y + 18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 120, 60);
+  doc.text(rs(totalRent), 185, y + 18, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  doc.text('Total Expenses:', 22, y + 25);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(180, 60, 60);
+  doc.text(rs(totalExp), 185, y + 25, { align: 'right' });
+
+  doc.setDrawColor(200, 210, 230);
+  doc.line(22, y + 30, 192, y + 30);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60, 60, 60);
+  doc.text('Net Balance:', 22, y + 39);
+  doc.setTextColor(...balColor);
+  doc.text(`${balPos ? '+' : '-'}${rs(Math.abs(totalBal))}`, 185, y + 39, { align: 'right' });
+
+  // ── Footer ───────────────────────────────────────────────────
+  doc.setTextColor(180, 180, 180);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  const today = new Date().toLocaleDateString('en-IN');
+  doc.text(`Generated on ${today}  |  Rent & Expense Manager`, 14, 289);
+  doc.text(propertyName, 196, 289, { align: 'right' });
+
+  doc.save(`${propertyName.replace(/\s+/g, '_')}_Yearly_${year}.pdf`);
+};

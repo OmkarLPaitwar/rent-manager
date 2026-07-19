@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import API from '../utils/api';
 import Loader from '../components/Loader';
+import { useAuth } from '../context/AuthContext';
+import { generateYearlyPDF } from '../utils/pdfExport';
 
 const MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmt = v => `${(v/1000).toFixed(0)}k`;
 
 export default function YearlyReport() {
+  const { user } = useAuth();
   const [year, setYear] = useState(new Date().getFullYear());
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,8 +37,13 @@ export default function YearlyReport() {
           <div className="page-title">📈 Yearly Report</div>
           <div className="page-sub">{year}</div>
         </div>
-        <input type="number" value={year} min={2020} max={2099} onChange={e => setYear(+e.target.value)}
-          className="form-control" style={{ width: 90, fontSize: 14 }} />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input type="number" value={year} min={2020} max={2099} onChange={e => setYear(+e.target.value)}
+            className="form-control" style={{ width: 90, fontSize: 14 }} />
+          <button className="btn btn-accent" onClick={() => data && generateYearlyPDF(year, data, user?.propertyName || 'My Property')} style={{ padding: '8px 12px' }}>
+            ⬇️ PDF
+          </button>
+        </div>
       </div>
 
       <div className="stats-grid" style={{ marginBottom: 20 }}>
@@ -150,6 +158,12 @@ export default function YearlyReport() {
             </span>
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16, textAlign: 'center' }}>
+        <button className="btn btn-accent" style={{ width: '100%', padding: 14, fontSize: 15 }} onClick={() => data && generateYearlyPDF(year, data, user?.propertyName || 'My Property')}>
+          ⬇️ Download Yearly PDF Report
+        </button>
       </div>
     </div>
   );
