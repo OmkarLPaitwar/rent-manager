@@ -114,13 +114,26 @@ export default function Layout({ children }) {
       </nav>
 
       {/* ── MORE DRAWER ── */}
-      {moreOpen && <div style={{ position: 'fixed', inset: 0, zIndex: 249, background: 'rgba(0,0,0,0.3)', overscrollBehavior: 'contain' }} onClick={() => setMoreOpen(false)} />}
+      {moreOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 249,
+            background: 'rgba(0,0,0,0.3)',
+            overscrollBehavior: 'contain',
+            pointerEvents: 'auto'
+          }}
+          onClick={() => setMoreOpen(false)}
+        />
+      )}
       <div className={`more-drawer ${moreOpen ? 'open' : ''}`}>
         <div className="more-drawer-handle" />
         <div className="more-drawer-grid">
           {BOTTOM_MORE.map(n => (
             <NavLink
-              key={n.to} to={n.to}
+              key={n.to}
+              to={n.to}
               className={({ isActive }) => `more-drawer-item${isActive ? ' active' : ''}`}
               onClick={() => setMoreOpen(false)}
             >
